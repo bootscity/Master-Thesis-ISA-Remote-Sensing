@@ -948,6 +948,7 @@ for(i in 1:nrow(NDVIPorCulturaD4))
 lines(datasGrafico,NDVIPorCulturaD4[1,3:10],col='red',lwd=5)
 
 
+
 ##########################################################################
 #Historgramas/densidades
 
