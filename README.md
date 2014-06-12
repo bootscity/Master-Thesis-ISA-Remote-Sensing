@@ -1,6 +1,6 @@
 Master-Thesis-ISA-Remote-Sensing
 ================================
-Master Thesis - Remote Sensing
+Master's Thesis - Remote Sensing
 
 Environmental Engineering - ISA/UL - Lisbon, Portugal
 
