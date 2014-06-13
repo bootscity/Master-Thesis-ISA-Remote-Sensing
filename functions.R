@@ -2,13 +2,13 @@
 # Master's Thesis - Remote Sensing                      #
 # Environmental Engineering - ISA/UL - Lisbon, Portugal #
 # (c) 2014 by Jonas Schmedtmann                         #
+#                                                       #
+# FUNCTIONS SCRIPT                                      #
+#                                                       #
+# This script contains the functions used by the main   #
+# sript. Each function is documented (in portuguese).   #
 #########################################################
 
-
-
-##########################################################################################
-# 0. FUNCOES                                                                             #
-##########################################################################################
 
 # Indice de funcoes:
 #   01. init
@@ -18,7 +18,6 @@
 #   06. constroiListaDados
 #   XX. obtemConteudoParcela
 #   XX. parcNDVI
-#   XX. parcNIFAP
 #   XX. constroiDadosANOVA
 #   XX. verificaAprovacaoFinalValidacao
 #   XX. constroiTodasParcelas
@@ -48,28 +47,14 @@ init  <-  function()
   library(subselect)
   library(plotrix)
   
-  #Definicao de codigos
+  #Definicao de codigos de culturas
   codigos2005 <<- read.delim("culturas2005.txt",header=T)
   codigosNovos2005 <<- read.delim("culturasNovas2005.txt",header=T)
   codNomesAbrev <- c('Past. perm.', 'Sup. forrageira','Arroz','Milho','Trigo','Pousio','Cevada','Vinha','Aveia','Lolium','Sup. nao usada', 'Past. pobre','Betteraba sac.','Olival','Sorgo','Girassol','Horticolas')
   codigosNovos2005 <<- cbind(codigosNovos2005,codNomesAbrev)
   
   #Definicao de constantes
-  CAMINHO.SHP <<- "../01 Dados/02 Dados espaciais"
-  CAMINHO.LANDSAT <<- "../01 Dados/03 Imagens satelite/LANDSAT"
-  
-  PROJ4.IGEOE <<- CRS("+proj=tmerc +lat_0=39.66666666666666 +lon_0=-8.131906111111112 +k=1 +x_0=200000 +y_0=300000 +ellps=intl +units=m +nadgrids=ptLX_e89.gsb +wktext +no_defs")
-  PROJ4.ETRS <<- CRS("+proj=tmerc +lat_0=39.66825833333333 +lon_0=-8.133108333333334 +k=1 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs")
-  PROJ4.UTM <<- CRS("+proj=utm +zone=29 +ellps=WGS84 +datum=WGS84 +units=m")
-  ANOS <<- c(2003,2004,2005)
-  
-  #http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20090027884.pdf
-  BANDAS.LANDSAT <<- c(1,2,3,4,5,7)
-  ESOLAR.TM5 <<- c(1983,1796,1536,1031,220,83.44)
-  ESOLAR.ETM7 <<- c(1997,1812,1533,1039,230.8,84.9)
-  
-  TAMANHO.CELULA <<- 30
-  
+  source('constants.R')
 }
 
 
@@ -529,22 +514,6 @@ parcNDVI <- function(parcela,apenasInterior=TRUE)
     out[[datas[i]]] <- NDVI
   }
   return(out)
-}
-
-
-#XX. Funcao parcNIFAP
-#   funcao: 
-#   input:  
-#   output: NIFAP ao qual pertence a parcela introduzida
-parcNIFAP <- function(nomeParc)
-{
-  for(i in 1:length(listaDados))
-    for(j in 1:length(listaDados[[i]]))
-      for(k in 1:length(listaDados[[i]][[j]]))
-      {
-        if (names(listaDados[[i]][[j]])[[k]] == nomeParc)
-          return(names(listaDados)[[i]])
-      }
 }
 
 
