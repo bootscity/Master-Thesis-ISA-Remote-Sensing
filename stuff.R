@@ -1,5 +1,5 @@
 #########################################################
-# Master Thesis - Remote Sensing                        #
+# Master's Thesis - Remote Sensing                      #
 # Environmental Engineering - ISA/UL - Lisbon, Portugal #
 # (c) 2014 by Jonas Schmedtmann                         #
 #########################################################
@@ -17,10 +17,10 @@
 
 
 #Obter conteudo de uma parcela para diferentes datas e bandas
-parc<-listaDados$n1541$a2005$p1432302680003.301.00
-conteudoParcIn<-obtemConteudoParcela(parc)
-conteudoParcInSemViz<-obtemConteudoParcela(parc,excluiVizinhos=TRUE)
-conteudoParc<-obtemConteudoParcela(parc,apenasInterior=FALSE)
+parc  <-  listaDados$n1541$a2005$p1432302680003.301.00
+conteudoParcIn <- obtemConteudoParcela(parc)
+conteudoParcInSemViz <- obtemConteudoParcela(parc,excluiVizinhos=TRUE)
+conteudoParc <- obtemConteudoParcela(parc,apenasInterior=FALSE)
 
 plot(parc$DR$d45[,,7], parc$DR$d45[,,8])
 lines(parc$coordsPoly, col="red")
@@ -28,7 +28,7 @@ lines(parc$coordsPoly, col="red")
 
 #Package kknn
 library(kknn)
-classTodCult.kknn<-kknn(dadosTreino2[,-1], dadosValidacao2[,-1], dadosTreino2[,1], k=10)
+classTodCult.kknn <- kknn(dadosTreino2[,-1], dadosValidacao2[,-1], dadosTreino2[,1], k=10)
 
 
 
@@ -50,15 +50,15 @@ plot(listaDados$n197$a2003$p1162347095001.301.00$DR$d29$X, listaDados$n197$a2003
 lines(listaDados$n197$a2003$p1162347095001.301.00$coordsPoly, col="red")
 
 #Assinaturas espectrais ao longo do ano
-frequencias<-c(0.485, 0.56, 0.66, 0.835, 1.65, 2.22)
+frequencias <- c(0.485, 0.56, 0.66, 0.835, 1.65, 2.22)
 
-todasMedias<-matrix(nrow=length(conteudoParc), ncol=length(conteudoParc[[1]]))
+todasMedias <- matrix(nrow=length(conteudoParc), ncol=length(conteudoParc[[1]]))
 for(i in 1:length(conteudoParc))
 {
-  assinatura<-c()
+  assinatura <- c()
   for(j in 1:length(conteudoParc[[i]]))
-    assinatura[j]<-conteudoParc[[i]][[j]][["media"]]
-  todasMedias[i,]<-assinatura
+    assinatura[j] <- conteudoParc[[i]][[j]][["media"]]
+  todasMedias[i,] <- assinatura
 }
 
 for(i in 1:nrow(todasMedias))
@@ -85,7 +85,7 @@ system.time()
 for(i in 1:length(listaDados))
   for(j in 1:length(listaDados[[i]][[1]]))
   {
-    parc<-listaDados[[i]][[1]][[j]]
+    parc <- listaDados[[i]][[1]][[j]]
     .
     .
     .
@@ -99,10 +99,10 @@ for(i in 1:length(listaDados))
 
 ###############################
 #USING APPLY
-j<-c(3,4,5,-2,4,-3)
+j <- c(3,4,5,-2,4,-3)
 j[j<0]
 
-m<-matrix(data=cbind(rnorm(20, 0), rnorm(20, 2), rnorm(20, 5)), nrow=20, ncol=3)
+m <- matrix(data=cbind(rnorm(20, 0), rnorm(20, 2), rnorm(20, 5)), nrow=20, ncol=3)
 apply(m, 1, mean) #applying across rows of matrix
 apply(m, 2, mean) #applying across cols of matrix
 apply(m, 2, function(x) length(x[x<0]))
@@ -115,20 +115,20 @@ lapply(1:3, function(x) x^2)  #Returns lsit
 
 ########################
 #more stuff
-colnames(m)<-c('method1', 'method2', 'method3')
+colnames(m) <- c('method1', 'method2', 'method3')
 head(m)
 m[,'method1']
-df<-as.data.frame(m);df
-df.stack<-stack(df);df.stack
+df <- as.data.frame(m);df
+df.stack <- stack(df);df.stack
 unstack(df.stack)
 
 
-x<-1:10
-names(x)<-letters[1:10]
+x <- 1:10
+names(x) <- letters[1:10]
 x['f']
-x[x > 5]<-0;x
+x[x > 5] <- 0;x
 
-y<-seq(1, 30, by=3);y
+y <- seq(1, 30, by=3);y
 which(y %% 2 == 0)
 
 
@@ -153,11 +153,11 @@ do.call(rbind, foo)
 
 #########################
 #using apply for lists
-mylist<-list()
+mylist <- list()
 for(i in 1:5) {
-  mylist[[i]]<-list()
+  mylist[[i]] <- list()
   for(j in 1:5) {
-    mylist[[i]][[j]]<-i*j
+    mylist[[i]][[j]] <- i*j
   }
 }
 
