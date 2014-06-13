@@ -18,6 +18,7 @@
 #   06. constroiListaDados
 #   XX. obtemConteudoParcela
 #   XX. parcNDVI
+#   XX. parcNIFAP
 #   XX. constroiDadosANOVA
 #   XX. verificaAprovacaoFinalValidacao
 #   XX. constroiTodasParcelas
@@ -517,6 +518,22 @@ parcNDVI <- function(parcela,apenasInterior=TRUE)
 }
 
 
+#XX. Funcao parcNIFAP
+#   funcao: 
+#   input:  
+#   output: NIFAP ao qual pertence a parcela introduzida
+parcNIFAP<-function(nomeParc)
+{
+  for(i in 1:length(listaDados))
+    for(j in 1:length(listaDados[[i]]))
+      for(k in 1:length(listaDados[[i]][[j]]))
+      {
+        if (names(listaDados[[i]][[j]])[[k]] == nomeParc)
+          return(names(listaDados)[[i]])
+      }
+}
+
+
 #XX. Funcao constroiDadosANOVA
 #   funcao: 
 #   input:  
@@ -644,11 +661,11 @@ verificaAprovacaoFinalValidacao <- function(NIFAP,ano)
 #   funcao: 
 #   input:  
 #   output: data.frame com informacoes relevantes sobre todas as parcelas existentes na listaDados
-constroiTodasParcelas <- function(excluiVazias=TRUE, funcao=mean)
+constroiTodasParcelas <- function(excluiVazias=TRUE)
 {
   count <- 1
   for(i in 1:length(listaDados))
-    #for(i in 1:10)
+  #for(i in 1)
     for(j in 1:length(listaDados[[i]]))
       for(k in 1:length(listaDados[[i]][[j]]))
       {
@@ -664,18 +681,22 @@ constroiTodasParcelas <- function(excluiVazias=TRUE, funcao=mean)
         cultura <- parc$atributos$CULTURA
         seq <- parc$atributos$SEQEIRO
         
-        #Obter reflectancias para diferentes datas
+        #Obter reflectancias para diferentes datas - média e desvio padrao
         reflectancias <- obtemConteudoParcela(parc,apenasInterior=TRUE)
-        matRef <- matRefNomes <- matrix(nrow=length(reflectancias),ncol=ncol(reflectancias[[1]]))
+        matRef <- matRefNomes <- matRefSD <- matRefSDNomes <- matrix(nrow=length(reflectancias),ncol=ncol(reflectancias[[1]]))
         for(m in 1:length(reflectancias))
           for(n in 1:ncol(reflectancias[[1]]))
           {  
-            matRef[m,n] <- funcao(reflectancias[[m]][,n])
+            matRef[m,n] <- mean(reflectancias[[m]][,n])
             matRefNomes[m,n] <- paste0("B",n,"_d",m)
+            matRefSD[m,n] <- sd(reflectancias[[m]][,n])
+            matRefSDNomes[m,n] <- paste0("B",n,"_d",m,"_SD")
           }
         
         vecRef <- as.vector(matRef)
         vecRefNomes <- as.vector(matRefNomes)
+        vecRefSD <- as.vector(matRefSD)
+        vecRefSDNomes <- as.vector(matRefSDNomes)
         
         #Obter NDVI's para diferentes datas
         NDVIs <- parcNDVI(parc)
@@ -684,17 +705,17 @@ constroiTodasParcelas <- function(excluiVazias=TRUE, funcao=mean)
           vecNDVI[l] <- mean(NDVIs[[l]])
         
         #Saltar esta parcela se houver algum NA e se isso for desejado
-        if(excluiVazias == TRUE && (any(is.na(vecRef)) || any(is.na(vecNDVI)) || 0 %in% vecRef || -1 %in% vecNDVI)) next
+        if(excluiVazias == TRUE && (any(is.na(vecRef)) || any(is.na(vecRefSD)) || any(is.na(vecNDVI)) || 0 %in% vecRef || -1 %in% vecNDVI)) next
         
         #Construir linha para data.frame
         if(i==1 && j==1 && k==1)
         {
           nDatas <- length(names(NDVIs))
-          nomesCol <- c("id","NIFAP","ano","area","cultura","seq",vecRefNomes,paste0("NDVI_d",1:nDatas))
+          nomesCol <- c("id","NIFAP","ano","area","cultura","seq",vecRefNomes,vecRefSDNomes,paste0("NDVI_d",1:nDatas))
           out <- matrix(nrow=0,ncol=length(nomesCol))
           colnames(out) <- nomesCol
         }
-        linha <- c(id,nifap,ano,as.numeric(area),cultura,seq,vecRef,vecNDVI)
+        linha <- c(id,nifap,ano,as.numeric(area),cultura,seq,vecRef,vecRefSD,vecNDVI)
         
         out <- rbind(out,linha)
         
@@ -702,6 +723,7 @@ constroiTodasParcelas <- function(excluiVazias=TRUE, funcao=mean)
   
   #Construir data.frame com numeros
   out <- as.data.frame(out)
+  rownames(out) <- out$id
   out$area <- as.numeric(as.character(out$area))
   out$cultura <- as.numeric(as.character(out$cultura))
   

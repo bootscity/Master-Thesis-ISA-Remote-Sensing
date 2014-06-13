@@ -426,6 +426,13 @@ for(i in 1:length(listaDados))
 
 
 
+#Subselect mais complicado para excluir variaveis
+classHmat <- ldaHmat(dadosTreino[,-1], dadosTreino$cultura)
+classSubselect <- eleaps(classHmat$mat,kmin=10,kmax=10,H=classHmat$H,r=classHmat$r,crit="Tau2",timelimit=600)
+classSubselect
+
+
+
 ##########################################################################################
 #   TESTES  DE APRENDIZAGEM DE NOVAS FUNÇÕES DO R                                        #
 ##########################################################################################

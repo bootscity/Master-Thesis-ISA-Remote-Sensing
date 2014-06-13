@@ -22,6 +22,7 @@ save(cdg, file="cdg2005.Robj")
 save(todasImagens, file="todasImagens2005.Robj")
 save(listaDados, file="listaDados2005.Robj")
 save(listaTodasParcelasIniciais, file="listaTodasParcelasIniciais2005.Robj")
+save(listaTodasParcelasIniciaisSD, file="listaTodasParcelasIniciaisSD2005.Robj")
 
 
 #Eliminar grandes objectos depois de escritos

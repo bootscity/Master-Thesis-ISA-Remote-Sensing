@@ -39,7 +39,6 @@ cdg <- carregaRecortaDadosEspaciais(coordsArea,PROJ4.UTM)
 #Obter todas as imagens
 rm(todasImagens)
 todasImagens<- constroiListaImagensLandsat(CAMINHO.LANDSAT, cdg$area, "CORR_12.05", anos=2005, corrige=TRUE)
-#todasImagens<- constroiListaImagensLandsat(CAMINHO.LANDSAT, cdg$area, "CORR_12.05", anos=2005, corrige=FALSE)
 
 #Obter lista de todos os dados
 rm(listaDados)
@@ -47,7 +46,6 @@ listaDados <- constroiListaDados(anos=2005)
 
 #Obter conteudo relevante para TODAS as parcelas, em forma de data.frame
 listaTodasParcelasIniciais <- constroiTodasParcelas()
-listaTodasParcelasIniciaisSD <- constroiTodasParcelas(funcao=sd)
 
 
 
@@ -77,13 +75,14 @@ abline(h=areaTotal*0.9,col='blue')
 abline(h=areaTotal*0.95,col='orange')
 abline(h=areaTotal*0.98,col='red')
 
-cultInfl <- areasCulturas[areasCulturas$V2 < areaTotal*0.95,]
+limite<-0.95
+cultInfl <- areasCulturas[areasCulturas$V2 < areaTotal*limite,]
 fraccaoInfl <- sum(cultInfl$area)/areaTotal
 cultInfluentes <- cultInfl$cultura
 
 
 ##########################################################################
-#Seleccionar apenas aquelas que representam 95% da ?rea e reclassificar
+#Seleccionar apenas aquelas que representam 95% da area e reclassificar
 listaTodasParcelas <- listaTodasParcelas[listaTodasParcelas$cultura %in% cultInfluentes,]
 
 novasClasses98 <- as.data.frame(cbind(cultInfluentes,c(1,2,3,4,5,6,7,6,8,9,10,11,12,13,14,5,15,4,16,17,8)))
@@ -95,24 +94,10 @@ for(i in 1:length(listaTodasParcelas$cultura))
   listaTodasParcelas$cultura[i] <- novasClasses$novaClasse[which(novasClasses$cultura==listaTodasParcelas$cultura[i])]
 
 
-##########################################################################
-#Preparacao dos dados para os classificadores
-
-dadosClassificadores <- listaTodasParcelas[,c(5,7:12,15:20,23:28,31:36,39:44,47:52)]
-dadosClassificadores$cultura <- as.factor(dadosClassificadores$cultura)
-
-#Amostra a usar para o modelo - metade para treino e metade para validacao
-set.seed(23)
-amostra <- sample(1:nrow(dadosClassificadores), ceiling(nrow(dadosClassificadores)/2))
-
-#Seleccao dos dados
-dadosTreino <- dadosClassificadores[amostra,]
-dadosValidacao <- dadosClassificadores[-amostra,]
-
 
 
 ##########################################################################################
-# 3. ANALISE EXPLORATORIA DOS DADOS                                                      #
+# 3. ANALISE EXPLORATORIA DOS DADOS COMPLETOS                                            #
 ##########################################################################################
 
 ##########################################################################
@@ -302,30 +287,37 @@ points3d(x=dadosTreino$B3_d3[dadosTreino$cultura == 13],
 
 
 ##########################################################################
-#Seleccao das variaveis
-#Matriz de variancias-covariancias das assinaturas espectrais
-corAssinaturas <- cor(listaTodasParcelas[,c(7:12,15:20,23:28,31:36,39:44,47:52)])
+#CONJUNTO COMPLETO
 
-#Usando apenas o trim.matrix do package subselect
-#Questao: Como escolher valor de tolval? Experimentar classificacoes com varios?
-criterioExclusaoVars <- 0.02
-classTrim <- trim.matrix(cor(dadosTreino[,-1]),criterioExclusaoVars);classTrim
+#Preparacao dos dados para os classificadores
+dadosClassificadores <- listaTodasParcelas[,c(5,7:12,15:20,23:28,31:36,39:44,47:52)]
+dadosClassificadores$cultura <- as.factor(dadosClassificadores$cultura)
 
-varsRetirar <- classTrim$numbers.discarded+1  #+1 porque na data.frame original, a coluna 1 ? a cultura
-varsSobram <- 1:length(dadosTreino)
-varsSobram <- varsSobram[! varsSobram %in% varsRetirar]
+#Amostra a usar para o modelo - metade para treino e metade para validacao
+set.seed(23)
+amostra <- sample(1:nrow(dadosClassificadores), ceiling(nrow(dadosClassificadores)/2))
 
-
-
-#Nao vale a pena usar isto...
-classHmat <- ldaHmat(dadosTreino[,-1], dadosTreino$cultura)
-classSubselect <- eleaps(classHmat$mat,kmin=10,kmax=10,H=classHmat$H,r=classHmat$r,crit="Tau2",timelimit=600)
-classSubselect
+#Seleccao dos dados
+dadosTreino <- dadosClassificadores[amostra,]
+dadosValidacao <- dadosClassificadores[-amostra,]
 
 
 ##########################################################################
+#SUB-CONJUNTO
+
+#Usando a funcao trim.matrix do package subselect
+dadosTrim <- listaTodasParcelas[,c(5,(7:54))]
+dadosTrim <- dadosClassificadores
+criterioExclusaoVars <- 0.02
+classTrim <- trim.matrix(cor(dadosTrim[,-1]),criterioExclusaoVars);classTrim
+
+varsRetirar <- classTrim$numbers.discarded+1  #+1 porque na data.frame original, a coluna 1 é a cultura
+varsSobram <- 1:length(dadosTrim)
+varsSobram <- varsSobram[! varsSobram %in% varsRetirar]
+
 #Preparacao dos NOVOS DADOS APOS SELECCAO DE VARIAVEIS
-dadosClassificadoresSub <- dadosClassificadores[,varsSobram]
+dadosClassificadoresSub <- dadosTrim[,varsSobram]
+dadosClassificadoresSub$cultura <- as.factor(dadosClassificadoresSub$cultura)
 
 #Amostra a usar para o modelo - metade para treino e metade para validacao
 set.seed(23)
@@ -335,6 +327,8 @@ amostra <- sample(1:nrow(dadosClassificadoresSub), ceiling(nrow(dadosClassificad
 dadosTreinoSub <- dadosClassificadoresSub[amostra,]
 dadosValidacaoSub <- dadosClassificadoresSub[-amostra,]
 
+#So usar SD's da resultados muito maus, e mesmo misturando SD's com medias da resultados maus
+#NDVI's sao melhores mas mesmo assim piores que reflectancias
 
 
 ##########################################################################################
@@ -352,6 +346,7 @@ dadosValidacaoSub <- dadosClassificadoresSub[-amostra,]
 #TODOS OS DADOS
 classCult.knn <- knn(dadosTreino[,-1], dadosValidacao[,-1], dadosTreino[,1], prob=TRUE, k=10)
 classCult.knn.tune <- tune.knn(dadosTreino[,-1], dadosTreino[,1], k=1:20);classCult.knn.tune
+melhorK <- classCult.knn.tune[1][[1]][1,1]
 
 #Validacao
 resultadoCult.knn <- table(pred=classCult.knn, true=dadosValidacao[,1]);resultadoCult.knn
@@ -375,7 +370,7 @@ classCultSub.tune.knn <- tune.knn(dadosTreinoSub[,-1], dadosTreinoSub[,1], k=1:2
 #Validacao
 resultadoCultSub.knn <- table(pred=classCultSub.knn, true=dadosValidacaoSub[,1]);resultadoCultSub.knn
 resultadoCultSub.knn <- as.data.frame.matrix(resultadoCultSub.knn)
-classDiagSub.knn <- diag(as.matrix(resultadoCult.knn.sub));classDiagSub.knn
+classDiagSub.knn <- diag(as.matrix(resultadoCultSub.knn));classDiagSub.knn
 certosSub.knn <- sum(classDiagSub.knn)/sum(resultadoCultSub.knn);certosSub.knn
 
 #Probabilidades
