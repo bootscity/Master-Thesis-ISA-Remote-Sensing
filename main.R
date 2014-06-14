@@ -289,7 +289,7 @@ points3d(x=dadosTreino$B3_d3[dadosTreino$cultura == 13],
 ##########################################################################
 #CONJUNTO COMPLETO
 
-#Preparacao dos dados para os classificadores
+#Preparacao dos dados para os classificadores - Apenas assinaturas espectrais das primeiras 6 datas
 dadosClassificadores <- listaTodasParcelas[,c(5,7:12,15:20,23:28,31:36,39:44,47:52)]
 dadosClassificadores$cultura <- as.factor(dadosClassificadores$cultura)
 
@@ -303,7 +303,7 @@ dadosValidacao <- dadosClassificadores[-amostra,]
 
 
 ##########################################################################
-#SUB-CONJUNTO
+#SUB-CONJUNTO DO CONJUNTO COMPLETO
 
 #Usando a funcao trim.matrix do package subselect
 dadosTrim <- listaTodasParcelas[,c(5,(7:54))]
@@ -318,10 +318,6 @@ varsSobram <- varsSobram[! varsSobram %in% varsRetirar]
 #Preparacao dos NOVOS DADOS APOS SELECCAO DE VARIAVEIS
 dadosClassificadoresSub <- dadosTrim[,varsSobram]
 dadosClassificadoresSub$cultura <- as.factor(dadosClassificadoresSub$cultura)
-
-#Amostra a usar para o modelo - metade para treino e metade para validacao
-set.seed(23)
-amostra <- sample(1:nrow(dadosClassificadoresSub), ceiling(nrow(dadosClassificadoresSub)/2))
 
 #Seleccao dos dados
 dadosTreinoSub <- dadosClassificadoresSub[amostra,]
@@ -415,7 +411,7 @@ for (i in 1:length(classProb[1,1,]))
 percCertos <- 100*percCertos
 
 classProbSub <- table(pred=classCultSub.knn, true=dadosValidacaoSub[,1], probs=probsSub.round.knn)
-percCertoSubs <- c()
+percCertosSub <- c()
 for (i in 1:length(classProbSub[1,1,]))
 {
   diag <- diag(as.matrix(classProbSub[,,i]))
@@ -427,9 +423,9 @@ par(las=1, mar=c(4.5,4.5,1,1))
 barplot(rbind(percCertos,percCertosSub), beside=T, space=c(0,2.5), border=NA, ylab='Percentagem de classificacoes correctas (%)', xlab='Probabilidade associada a classificao (%)', ylim=c(0,100), names.arg=seq(20,100,10),  col=c(rgb(0,0,0),rgb(0.7,0.7,0.7)));box()
 legend(x=2, y=98, legend=c("Completo","Sub-conjunto"), fill=c(rgb(0,0,0),rgb(0.7,0.7,0.7)))
 
-plot(seq(0.2,1,0.1),percCertos/100)
 
-#Frequ?ncia da ocorrencia de cada valor de probabilidade
+
+#Frequencia da ocorrencia de cada valor de probabilidade
 compProbs.knn <- rbind(table(probs.round.knn),table(probsSub.round.knn))
 barplot(compProbs.knn, beside=T, space=c(0,4), legend=c("Completo","Sub-conjunto"), border=NA, col=c(rgb(0,0,0),rgb(0.7,0.7,0.7)));box()
 
@@ -467,8 +463,17 @@ hist(probs.round.svm, breaks=14, col='blue')
 table(pred=validacao.svm, true=dadosValidacao[,1], probs=probs.round.svm)
 
 
+
+
+
+
+
 ###################
 #APENAS SUB-CONJUNTO DE DADOS
+
+SVM <- classificaSVM(treino=dadosTreinoSub, valid=dadosValidacaoSub, gamma=0.2, cost=2)
+
+
 classCultSub.svm <- svm(cultura ~ ., data=dadosTreinoSub, probability=TRUE, kernel='radial', gamma=0.2, cost=2)
 plot(classCultSub.svm, dadosTreinoSub, B3_d3 ~ B4_d3)
 
@@ -476,32 +481,83 @@ plot(classCultSub.svm, dadosTreinoSub, B3_d3 ~ B4_d3)
 classCultSub.tune.svm <- tune.svm(dadosTreinoSub[,-1], dadosTreinoSub[,1], gamma=seq(0, 0.5, by = .1));classCultSub.tune.svm
 classCultSub.tune.svm <- tune.svm(dadosTreinoSub[,-1], dadosTreinoSub[,1], gamma=0.2, cost=seq(1, 8, by = 1));classCultSub.tune.svm
 
+
+
+
 #Validacao
-validacaoSub.svm <- predict(classCultSub.svm, dadosValidacaoSub[,-1])
+validacaoSub.svm <- class1 <- predict(classCultSub.svm, dadosValidacaoSub[,-1])
 resultadoCultSub.svm <- table(pred = validacaoSub.svm, true = dadosValidacaoSub[,1]);resultadoCultSub.svm
 resultadoCultSub.svm <- as.data.frame.matrix(resultadoCultSub.svm)
 classDiagSub.svm <- diag(as.matrix(resultadoCultSub.svm));classDiagSub.svm
 certosSub.svm <- sum(classDiagSub.svm)/sum(resultadoCultSub.svm);certosSub.svm
 
+
 #Probabilidades
 probsSub.svm <- predict(classCultSub.svm, dadosValidacaoSub[,-1], probability=T)
 probsSub.svm <- attr(probsSub.svm, "prob")
-probsSub.svm <- as.vector(apply(probsSub.svm,1,max))
-probsSub.round.svm <- round(probsSub.svm,1)
-hist(probsSub.round.svm, breaks=14, col='green')
-table(pred=validacaoSub.svm, true=dadosValidacaoSub[,1], probs=probsSub.round.svm)
+probMax1Sub.svm <- as.vector(apply(probsSub.svm,1,max))
+probMax2Sub.svm <- as.vector(apply(probsSub.svm,1, function(x) max(x[x!=max(x)])))
+table(pred=validacaoSub.svm, true=dadosValidacaoSub[,1], probs=probMax1Sub.svm)
+
+class1 <- c()
+for (i in 1:nrow(probsSub.svm))
+  class1[i] <- as.numeric(names(which(probsSub.svm[i,] == probMax1Sub.svm[i])))
+
+class2 <- c()
+for (i in 1:nrow(probsSub.svm))
+  class2[i] <- as.numeric(names(which(probsSub.svm[i,] == probMax2Sub.svm[i])))
+
+names(resultadoCultSub.svm)
+
+#Resultados sob forma de data.frame
+x<-as.data.frame(cbind(verdade=dadosValidacaoSub[,1],
+                       class1=class1,
+                       prob1=round(probMax1Sub.svm,3),
+                       class2=class2,
+                       prob2=round(probMax2Sub.svm,3)))
+
+x[21:40,]
+
+probsSub.svm[13,]
+probMax2Sub.svm[13]
+names(which(probsSub.svm[15,] == probMax2Sub.svm[15]))
+
+
+x[x$class1==x$class2,]
+probsSub.svm['p1382278736002.302.00',]
+
+
+table(dadosValidacaoSub[,1],class1)
+
+
+
+#Tentar juntar codigos 1,2,6 na tabela de erro
+resultadoCultSub.svm
+jjj<-resultadoCultSub.svm
+jjj[1,]<-jjj[1,]+jjj[2,]+jjj[6,]
+jjj[,1]<-jjj[,1]+jjj[,2]+jjj[,6]
+jjj<-jjj[-c(2,6),-c(2,6)]
+sum(diag(as.matrix(jjj)))/sum(jjj)
+
 
 #So com P >= 60%
-jjj <- table(pred=validacaoSub.svm, true=dadosValidacaoSub[,1], probs=probsSub.round.svm)
+jjj <- table(pred=validacaoSub.svm, true=dadosValidacaoSub[,1], probs=probMax1Sub.svm)
 jjj <- as.matrix(jjj[,,5]+jjj[,,6]+jjj[,,7]+jjj[,,8]+jjj[,,9])
 sum(diag(jjj))/sum(jjj)
+jjj[1,]<-jjj[1,]+jjj[2,]+jjj[6,]
+jjj[,1]<-jjj[,1]+jjj[,2]+jjj[,6]
+jjj<-jjj[-c(2,6),-c(2,6)]
+sum(diag(as.matrix(jjj)))/sum(jjj)
+
+#Tentativa de escolha da P ideal
+plot(unique(sort(probMax1Sub.svm,T)),cumsum(rev(table(probMax1Sub.svm))))
+abline(v=0.6)
 
 
-###################
-#Comparacao das probabilidades
-compProbs.svm <- rbind(table(probs.round.svm),table(probsSub.round.svm))
-barplot(compProbs.svm, beside=T, space=c(0,5), legend=c("Completo","Sub-conjunto"), xlab="Probabilidade", ylab="Numero de parcelas", border=NA, col=c(rgb(0,0,0),rgb(0.7,0.7,0.7)));box()
-#Conclusao: com dados nao-completos, existem mais classificacaes com 100% de certeza
 
+
+
+
+#Relacionar com areas?
 
 

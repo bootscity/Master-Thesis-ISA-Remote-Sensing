@@ -65,7 +65,7 @@ init  <-  function()
 #   input:  coordsAreaEstudo: matriz de coordenadas X,Y que vai ser a area de estudo
 #           crs: string de projeccao da classe CRS
 #   output: lista com os diferentes cdg's transformados e recortados (apenas as parelas)
-carregaRecortaDadosEspaciais <- function(coordsAreaEstudo,crs)
+carregaRecortaDadosEspaciais <- function(coordsAreaEstudo, crs)
 {
   #Ler os dados dos ficheiros shp
   #p2003 <- readShapePoly(paste0(CAMINHO.SHP,"/2003/2003_PARC"), proj4string=PROJ4.IGEOE)
@@ -418,7 +418,7 @@ constroiListaDados <- function(anos=ANOS)
 #   input:  
 #   output: lista que para cada data tem uma matriz que tem uma coluna para cada banda, contendo todas as
 #           reflectancias
-obtemConteudoParcela <- function(parcela,apenasInterior=TRUE,excluiVizinhos=FALSE)
+obtemConteudoParcela <- function(parcela, apenasInterior=TRUE, excluiVizinhos=FALSE)
 {
   out <- list()
   poly.x <- parcela$coordsPoly[,1]
@@ -503,7 +503,7 @@ obtemConteudoParcela <- function(parcela,apenasInterior=TRUE,excluiVizinhos=FALS
 #   funcao: 
 #   input:  
 #   output: lista que para cada data tem o NDVI de cada pixel na parcela
-parcNDVI <- function(parcela,apenasInterior=TRUE)
+parcNDVI <- function(parcela, apenasInterior=TRUE)
 {
   out <- list()
   conteudo <- obtemConteudoParcela(parcela,apenasInterior)
@@ -538,7 +538,7 @@ parcNIFAP<-function(nomeParc)
 #   funcao: 
 #   input:  
 #   output: data.frame com dados organizados para se efectuar uma ANOVA hierarquizada
-constroiDadosANOVA <- function(ano,data,banda,dimAmostra)
+constroiDadosANOVA <- function(ano, data, banda, dimAmostra)
 {
   #ano <- which(ANOS==ano)    Isto so vai funcionar quando a listaDados tiver todos os anos
   numParcANOVA <<- 1
@@ -580,7 +580,7 @@ constroiDadosANOVA <- function(ano,data,banda,dimAmostra)
 #                  do solo e CONHECIDA
 #           ano:   ano para o qual foi feita a verificacao
 #   output: 0/1 se o processo obtem aprovacao de financiamento - VALIDACAO
-verificaAprovacaoFinalValidacao <- function(NIFAP,ano)
+verificaAprovacaoFinalValidacao <- function(NIFAP, ano)
 {
   processo <- listaDados[[NIFAP]][[paste0("a",ano)]]
   
@@ -683,20 +683,16 @@ constroiTodasParcelas <- function(excluiVazias=TRUE)
         
         #Obter reflectancias para diferentes datas - média e desvio padrao
         reflectancias <- obtemConteudoParcela(parc,apenasInterior=TRUE)
-        matRef <- matRefNomes <- matRefSD <- matRefSDNomes <- matrix(nrow=length(reflectancias),ncol=ncol(reflectancias[[1]]))
+        matRef <- matRefNomes <- matrix(nrow=length(reflectancias),ncol=ncol(reflectancias[[1]]))
         for(m in 1:length(reflectancias))
           for(n in 1:ncol(reflectancias[[1]]))
           {  
             matRef[m,n] <- mean(reflectancias[[m]][,n])
             matRefNomes[m,n] <- paste0("B",n,"_d",m)
-            matRefSD[m,n] <- sd(reflectancias[[m]][,n])
-            matRefSDNomes[m,n] <- paste0("B",n,"_d",m,"_SD")
           }
         
         vecRef <- as.vector(matRef)
         vecRefNomes <- as.vector(matRefNomes)
-        vecRefSD <- as.vector(matRefSD)
-        vecRefSDNomes <- as.vector(matRefSDNomes)
         
         #Obter NDVI's para diferentes datas
         NDVIs <- parcNDVI(parc)
@@ -705,17 +701,17 @@ constroiTodasParcelas <- function(excluiVazias=TRUE)
           vecNDVI[l] <- mean(NDVIs[[l]])
         
         #Saltar esta parcela se houver algum NA e se isso for desejado
-        if(excluiVazias == TRUE && (any(is.na(vecRef)) || any(is.na(vecRefSD)) || any(is.na(vecNDVI)) || 0 %in% vecRef || -1 %in% vecNDVI)) next
+        if(excluiVazias == TRUE && (any(is.na(vecRef)) || any(is.na(vecNDVI)) || 0 %in% vecRef || -1 %in% vecNDVI)) next
         
         #Construir linha para data.frame
         if(i==1 && j==1 && k==1)
         {
           nDatas <- length(names(NDVIs))
-          nomesCol <- c("id","NIFAP","ano","area","cultura","seq",vecRefNomes,vecRefSDNomes,paste0("NDVI_d",1:nDatas))
+          nomesCol <- c("id","NIFAP","ano","area","cultura","seq",vecRefNomes,paste0("NDVI_d",1:nDatas))
           out <- matrix(nrow=0,ncol=length(nomesCol))
           colnames(out) <- nomesCol
         }
-        linha <- c(id,nifap,ano,as.numeric(area),cultura,seq,vecRef,vecRefSD,vecNDVI)
+        linha <- c(id,nifap,ano,as.numeric(area),cultura,seq,vecRef,vecNDVI)
         
         out <- rbind(out,linha)
         
@@ -732,3 +728,78 @@ constroiTodasParcelas <- function(excluiVazias=TRUE)
   
   return(out)
 }
+
+
+#XX. Funcao classificaSVM
+#   funcao: 
+#   input:  
+#   output: 
+classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1, costRange=-1)
+{
+  #Optimizacao do classificador
+  if(tune == TRUE)
+  {
+    tune <- tune.svm(treino[,-1], treino[,1], gamma=gammaRange, cost=costRange)
+    gamma <- tune[1][[1]][1,1]
+    cost <- tune[1][[1]][1,2]
+  }
+  
+  #Treino do classificador
+  SVM <- svm(cultura ~ ., data=treino, probability=TRUE, kernel='radial', gamma=gamma, cost=cost)
+  
+  #Obtenção das probabilidades principais e secundarias 
+  probs <- attr(predict(SVM, valid[,-1], probability=T), "prob")
+  probs1 <- as.vector(apply(probs, 1, max))
+  probs2 <- as.vector(apply(probs, 1, function(x) max(x[x!=max(x)])))
+  
+  #Obtencao das classificacoes primarias e secundarias associadas as probabilidades
+  class1 <- class2 <- c()                                         
+  for (i in 1:nrow(probs))
+  {
+    class1[i] <- as.numeric(names(which(probs[i,] == probs1[i])))
+    class2[i] <- as.numeric(names(which(probs[i,] == probs2[i])))
+  }
+  
+  #Data.frame com os resultados obtidos
+  result <- data.frame(verdade=valid[,1],
+                       class1=class1,
+                       prob1=round(probs1, 2),
+                       class2=class2,
+                       prob2=round(probs2, 2))
+  
+  #Validacao e percentagem de classificacoes correctas
+  tabClass <- as.data.frame.matrix(table(class = class1, verdade = valid[,1]))
+  correcTot <- cc(tabClass)
+  
+  #Percentagem de classificacoes correctas em cada cultura
+  correcCult <- c()
+  for(i in 1:ncol(tabClass))
+    correcCult[i] <- tabClass[i,i]/sum(tabClass[,i])
+  names(correcCult) <- names(tabClass)
+  
+  #Percentagem de classificacoes correctas em cada GRUPO de probabilidade
+  tabClassProb <- as.array(table(class = class1, verdade = valid[,1], prob=round(probs1, 1)))
+  correcProb <- c()
+  for (i in 1:length(tabClassProb[1,1,]))
+    correcProb[i] <- cc(tabClassProb[,,i])
+  names(correcProb) <- names(table(round(probs1, 1)))
+  
+  #Construcao do output
+  out<-list(result=result,
+            tabClass=tabClass,
+            tabClassProb=tabClassProb,
+            correcTot=correcTot,
+            correcCult=correcCult,
+            correcProb=correcProb,
+            gamma=gamma,
+            cost=cost)
+}
+
+
+#XX. Funcao cc
+#   funcao: Calcula a correccao da classificacao duma tabela de erro dada
+#   input:  
+#   output: 
+cc <- function(m) return(sum(diag(as.matrix(m)))/sum(m))
+
+
