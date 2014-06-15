@@ -27,5 +27,15 @@ ESOLAR.ETM7 <<- c(1997,1812,1533,1039,230.8,84.9)
 TAMANHO.CELULA <<- 30
 #http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20090027884.pdf
 
+#Coordenadas da area de estudo
+AREA.X <- c( 490733,  568131,  573315,  490717,  490733)
+AREA.Y <- c(4365213, 4368546, 4286457, 4286706, 4365213)
+
+
+#Esta e a area da pequena faixa nao danificada
+#AREA.X <- c( 508262,  528870,  511269,  490710,  508262)
+#AREA.Y <- c(4365569, 4362462, 4288360, 4291713, 4365569)
+
+
 
 
