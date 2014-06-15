@@ -33,14 +33,16 @@ source('functions.R')
 init()
 
 #Definir area de estudo, carregar dados, recortar e projectar
-areaX <- c(508262,528870,511269,490710,508262)
-areaY <- c(4365569,4362462,4288360,4291713,4365569)
-coordsArea <- cbind(areaX,areaY)
-cdg <- carregaRecortaDadosEspaciais(coordsArea,PROJ4.UTM)
+coordsArea <- cbind(AREA.X,AREA.Y)
+cdg <- carregaRecortaDadosEspaciais(coordsArea, PROJ4.UTM)
 
-#Obter todas as imagens
+#Obter e corrigir todas as imagens
 rm(todasImagens)
-todasImagens<- constroiListaImagensLandsat(CAMINHO.LANDSAT, cdg$area, "CORR_12.05", anos=2005, corrige=TRUE)
+todasImagens <- constroiListaImagensLandsat(landsatPath=CAMINHO.LANDSAT,
+                                            areaEstudo=cdg$area,
+                                            prefixo="CORR_15.06",
+                                            anos=2005,
+                                            corrige=FALSE)
 
 #Obter lista de todos os dados
 rm(listaDados)
@@ -48,6 +50,7 @@ listaDados <- constroiListaDados(anos=2005)
 
 #Obter conteudo relevante para TODAS as parcelas, em forma de data.frame
 listaTodasParcelasIniciais <- constroiTodasParcelas()
+
 
 
 
@@ -79,6 +82,7 @@ abline(h=areaTotal*0.98,col='red')
 
 limite<-0.95
 cultInfl <- areasCulturas[areasCulturas$V2 < areaTotal*limite,]
+cultInfl <- cultInfl[!cultInfl$cultura == 27]
 fraccaoInfl <- sum(cultInfl$area)/areaTotal
 cultInfluentes <- cultInfl$cultura
 
@@ -87,15 +91,12 @@ cultInfluentes <- cultInfl$cultura
 #Seleccionar apenas aquelas que representam 95% da area e reclassificar
 listaTodasParcelas <- listaTodasParcelas[listaTodasParcelas$cultura %in% cultInfluentes,]
 
-novasClasses98 <- as.data.frame(cbind(cultInfluentes,c(1,2,3,4,5,6,7,6,8,9,10,11,12,13,14,5,15,4,16,17,8)))
-novasClasses <- as.data.frame(cbind(cultInfluentes,c(1,2,3,4,5,6,7,6,8,9,10,11,12,13,14,5)))
+novasClasses <- as.data.frame(cbind(cultInfluentes,c(1,2,3,4,5,6,7,8,5,9,10,11,12)))
 colnames(novasClasses) <- c('cultura','novaClasse')
 nClasses <- length(table(novasClasses$novaClasse))
 
 for(i in 1:length(listaTodasParcelas$cultura))
   listaTodasParcelas$cultura[i] <- novasClasses$novaClasse[which(novasClasses$cultura==listaTodasParcelas$cultura[i])]
-
-
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -148,7 +149,7 @@ for(i in 7:length(listaTodasParcelas))
 nn <- colnames(listaTodasParcelas[,7:length(listaTodasParcelas)])
 resultadoANOVA <- data.frame(cbind(nn,FValues,pValues,efeito))
 resultadoANOVA$FValues <- as.numeric(as.character(resultadoANOVA$FValues))
-resultadoANOVA <- resultadoANOVA[order(-resultadoANOVA$FValues),]
+resultadoANOVA <- resultadoANOVA[order(-resultadoANOVA$FValues),]; resultadoANOVA
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -195,17 +196,17 @@ lines(BANDAS.LANDSAT,assinaturasPorCulturaD3[1,3:8],col='red',lwd=5)
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 3.3 NDVI's por cultura ----
 NDVIPorCulturaD4 <- dados[,list(area=sum(area),
-                              NDVI_1=mean(NDVI_1),
-                              NDVI_2=mean(NDVI_2),
-                              NDVI_3=mean(NDVI_3),
-                              NDVI_4=mean(NDVI_4),
-                              NDVI_5=mean(NDVI_5),
-                              NDVI_6=mean(NDVI_6),
-                              NDVI_7=mean(NDVI_7),
-                              NDVI_8=mean(NDVI_8)),by=cultura]
+                              NDVI_d1=mean(NDVI_d1),
+                              NDVI_d2=mean(NDVI_d2),
+                              NDVI_d3=mean(NDVI_d3),
+                              NDVI_d4=mean(NDVI_d4),
+                              NDVI_d5=mean(NDVI_d5),
+                              NDVI_d6=mean(NDVI_d6),
+                              NDVI_d7=mean(NDVI_d7),
+                              NDVI_d8=mean(NDVI_d8)),by=cultura]
 NDVIPorCulturaD4 <- as.data.frame(NDVIPorCulturaD4)
 
-datasGrafico <- datas
+datasGrafico <- datas <- names(listaDados[[1]][[1]][[1]]$DR)
 substr(datasGrafico,0,1) <- "0"
 datasGrafico <- as.numeric(datasGrafico)
 
@@ -309,7 +310,6 @@ dadosValidacao <- dadosClassificadores[-amostra,]
 # 4.2 Sub-conjunto do conjunto completo ----
 
 #Usando a funcao trim.matrix do package subselect
-dadosTrim <- listaTodasParcelas[,c(5,(7:54))]
 dadosTrim <- dadosClassificadores
 criterioExclusaoVars <- 0.02
 classTrim <- trim.matrix(cor(dadosTrim[,-1]),criterioExclusaoVars);classTrim
@@ -341,10 +341,10 @@ dadosValidacaoSub <- dadosClassificadoresSub[-amostra,]
 # 5.1 KNN - K vizinhos mais proximos ----
 
 #Todos os dados
-KNN.comp <- classificaKNN(treino=dadosTreino, valid=dadosValidacao, k=10)
+KNN.comp <- classificaKNN(treino=dadosTreino, valid=dadosValidacao, k=20, tune=TRUE, kRange=c(1,10))
 
 #Apenas sub-conjunto de dados
-KNN.sub  <- classificaKNN(treino=dadosTreinoSub, valid=dadosValidacaoSub, k=10)
+KNN.sub  <- classificaKNN(treino=dadosTreinoSub, valid=dadosValidacaoSub, k=20, tune=TRUE, kRange=c(1,10))
 
 
 
@@ -368,41 +368,51 @@ gamma=0.2, cost=seq(1, 8, by = 1)
 
 
 #Juntar codigos 1,2,6 na tabela de erro
-condensaMatriz(SVM.sub$tabClass, c(1,2,6))
+condensaMatriz(SVM.comp$tabClass, c(1,2,5,8,9))
+
+SVM.comp$tabClass
 
 
+#Tentativa de escolha da P ideal: classificacoes correctas se escolhermos apenas classificaoes com P >= x
+correcCum <- c()
+for (i in length(SVM.sub$tabClassProb[1,1,]):1)
+{
+  m <- matrix(data=0, nrow=dim(SVM.sub$tabClassProb[,,1])[1], ncol=dim(SVM.sub$tabClassProb[,,1])[2])
+  for (j in length(SVM.sub$tabClassProb[1,1,]):i)
+    m <- m + SVM.sub$tabClassProb[,,j]
+  correcCum[i] <- cc(m)
+}
+correcCum <- rev(correcCum)
+
+plot(seq(1,0.2,-0.1),correcCum,xlim=c(1,0.2),type='l')
+abline(h=0.8, col='red')
+
+#SUGESTAO:
+#Podemos fixar um nivel de qualidade desejado (eixo do y, exemplo de 80% de classificacoes correctas) e fazer uma curva deste genero para cada classe e ver que valor de probabilidade é o minimo aceitavel para assegurar o nivel desejado.
+#Desta forma fica fixo um valor de P=x
+#Talvez perguntar ao IFAP qual o nivel que eles pretendem?
+#Depois dá jeito tambem ver a quantidade de parcelas que podemos de facto classsifcar fixando um valor de probabilidade x.
 
 
-
-#So com P >= 60%
-jjj <- SVM.sub$tabClassProb
-jjj <- as.matrix(jjj[,,5]+jjj[,,6]+jjj[,,7]+jjj[,,8]+jjj[,,9])
-sum(diag(jjj))/sum(jjj)
-condensaMatriz(jjj, c(1,2,6))
-
-
-#Tentativa grafica de escolha da P ideal
-plot(unique(sort(SVM.sub$result$prob1,T)),cumsum(rev(table(SVM.sub$result$prob1))))
-abline(v=0.6)
-
-#Relacionar com areas?
-
+#Relacionar com sequeiro
+plot(listaTodasParcelas[-amostra,6], SVM.comp$result$prob1)
+boxplot(SVM.comp$result$prob1 ~ listaTodasParcelas[-amostra,6])
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 5.3 Comparacao de KNN e SVM para conjunto total e sub-conjunto ----
 
 #Percentagem de classificacoes correctas em cada cultura
-par(las=2, mar=c(8,4.5,1,1))
+par(las=2, mar=c(10,4.5,1,1))
 barplot(rbind(KNN.comp$correcCult,KNN.sub$correcCult,SVM.comp$correcCult,SVM.sub$correcCult), 
         beside=T, 
         space=c(0,2), 
         border=NA, 
-        names.arg=codigosNovos2005$codNomesAbrev[1:14], 
+        names.arg=codigosNovos2005$NOVO_NOME[1:12], 
         ylab='Classificacoes correctas', 
         ylim=c(0,1), 
         col=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)));box()
-legend(x=34, y=0.98,
+legend(x=42.5, y=0.98,
        legend=c("KNN Completo","KNN Sub-conjunto","SVM Completo","SVM Sub-conjunto"),
        fill=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)))
 
@@ -425,13 +435,13 @@ legend(x=2, y=0.98,
 #Frequencia da ocorrencia de cada valor de probabilidade
 barplot(rbind(table(KNN.comp$result$prob1R),table(KNN.sub$result$prob1R),table(SVM.comp$result$prob1R),table(SVM.sub$result$prob1R)), 
         beside=T, 
-        ylim=c(0,410), 
+        ylim=c(0,1400), 
         space=c(0,2.5),
         border=NA,
         ylab='Frequencia',
         xlab='Probabilidade associada a classificao',
         col=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)));box()
-legend(x=43.5, y=405,
+legend(x=1.3, y=1380,
        legend=c("KNN Completo","KNN Sub-conjunto","SVM Completo","SVM Sub-conjunto"),
        fill=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)))
 

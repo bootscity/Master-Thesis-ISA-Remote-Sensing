@@ -52,8 +52,8 @@ init  <-  function()
   #Definicao de codigos de culturas
   codigos2005 <<- read.delim("culturas2005.txt",header=T)
   codigosNovos2005 <<- read.delim("culturasNovas2005.txt",header=T)
-  codNomesAbrev <- c('Past. perm.', 'Sup. forrageira','Arroz','Milho','Trigo','Pousio','Cevada','Vinha','Aveia','Lolium','Sup. nao usada', 'Past. pobre','Betteraba sac.','Olival','Sorgo','Girassol','Horticolas')
-  codigosNovos2005 <<- cbind(codigosNovos2005,codNomesAbrev)
+  #codNomesAbrev <- c('Past. perm.', 'Sup. forrageira','Arroz','Milho','Trigo','Pousio','Cevada','Vinha','Aveia','Lolium','Sup. nao usada', 'Past. pobre','Betteraba sac.','Olival','Sorgo','Girassol','Horticolas')
+  #codigosNovos2005 <<- cbind(codigosNovos2005,codNomesAbrev)
   
   #Definicao de constantes
   source('constants.R')
@@ -135,6 +135,9 @@ corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo, prefixo, c
       
       #Mascarar valores que estao fora da area de estudo como NA
       imagemArea <- mask(x=imagemArea, mask=areaEstudo, updatevalue=NA)
+      
+      #Converter valores de 0 (FAIXAS PRETAS) para NA
+      imagemArea[imagemArea == 0] <- NA
       
       #1) Radiancia no sensor
       #A banda 7 e diferente porque existem duas bandas 6
@@ -237,7 +240,7 @@ corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo, prefixo, c
 constroiListaImagensLandsat <- function(landsatPath, areaEstudo, prefixo, anos=ANOS, corrige=FALSE)
 {
   conjuntos <- list.files(landsatPath, full.names = FALSE)
-  todosAnos <- 0;doys <- 0
+  todosAnos <- 0; doys <- 0
   out <- list()
   
   #Leitura dos dados a partir dos nomes das directorias
@@ -298,16 +301,10 @@ constroiListaImagensLandsat <- function(landsatPath, areaEstudo, prefixo, anos=A
 #                             $coordsPoly
 constroiListaDados <- function(anos=ANOS)
 {
-  #Geracao dos dados de base para a criacao da lista, chamando outras funcoes
-  #cdg <- leDadosEspaciais()
-  #cdg <- transformaDadosEspaciais(cdg, PROJ4.UTM)
   todosNIFAP <- c(cdg$parc2005@data$NIFAP)#, cdg$parc2004@data$NIFAP, cdg$parc2005@data$NIFAP)
   unicosNIFAP <- sort(unique(todosNIFAP))
   listaGlobal <- list()
-  
-  #Aqui e feita a correccao de todas as imagens
-  #todasImagens <<- constroiListaImagensLandsat(CAMINHO.LANDSAT, cdg$area, "CORR_12.05", anos=2005, corrige=F)
-  
+    
   #Construcao da lista
   for(i in 1:length(unicosNIFAP))
   {
@@ -689,7 +686,7 @@ constroiTodasParcelas <- function(excluiVazias=TRUE)
         for(m in 1:length(reflectancias))
           for(n in 1:ncol(reflectancias[[1]]))
           {  
-            matRef[m,n] <- mean(reflectancias[[m]][,n])
+            matRef[m,n] <- mean(reflectancias[[m]][,n], na.rm=T)
             matRefNomes[m,n] <- paste0("B",n,"_d",m)
           }
         
@@ -700,7 +697,7 @@ constroiTodasParcelas <- function(excluiVazias=TRUE)
         NDVIs <- parcNDVI(parc)
         vecNDVI <- c()
         for(l in 1:length(NDVIs))
-          vecNDVI[l] <- mean(NDVIs[[l]])
+          vecNDVI[l] <- mean(NDVIs[[l]], na.rm=T)
         
         #Saltar esta parcela se houver algum NA e se isso for desejado
         if(excluiVazias == TRUE && (any(is.na(vecRef)) || any(is.na(vecNDVI)) || 0 %in% vecRef || -1 %in% vecNDVI)) next
@@ -861,6 +858,12 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
     correcProb[i] <- cc(tabClassProb[,,i])
   names(correcProb) <- names(table(round(probs1, 1)))
   
+  #Percentagem de classificacoes correctas de cada cultura por grupo de proabilidade
+  correcCultProb <- matrix(ncol=ncol(tabClassProb), nrow=length(tabClassProb[1,1,]))
+  for(i in 1:ncol(tabClassProb))
+    for (j in 1:length(tabClassProb[1,1,]))
+      correcCultProb[j,i] <- tabClassProb[i,i,j]/sum(tabClassProb[,i,j])
+  
   #Construcao do output
   out<-list(result=result,
             tabClass=tabClass,
@@ -868,6 +871,7 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
             correcTot=correcTot,
             correcCult=correcCult,
             correcProb=correcProb,
+            correcCultProb=correcCultProb,
             gamma=gamma,
             cost=cost)
 }
