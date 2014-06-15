@@ -1,13 +1,13 @@
-#########################################################
-# Master's Thesis - Remote Sensing                      #
-# Environmental Engineering - ISA/UL - Lisbon, Portugal #
-# (c) 2014 by Jonas Schmedtmann                         #
-#                                                       #
-# LARGE OBJECT MANAGEMENT SCRIPT                        #
-#                                                       #
-# This handles the writing and reading of large objects #
-# into and from .Robj files.                            #
-#########################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Master's Thesis - Remote Sensing                      %
+# Environmental Engineering - ISA/UL - Lisbon, Portugal %
+# (c) 2014 by Jonas Schmedtmann                         %
+#                                                       %
+# LARGE OBJECT MANAGEMENT SCRIPT                        %
+#                                                       %
+# This handles the writing and reading of large objects %
+# into and from .Robj files.                            %
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 #Carregar objectos grandes

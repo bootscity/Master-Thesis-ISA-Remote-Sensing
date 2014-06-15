@@ -1,13 +1,13 @@
-#########################################################
-# Master's Thesis - Remote Sensing                      #
-# Environmental Engineering - ISA/UL - Lisbon, Portugal #
-# (c) 2014 by Jonas Schmedtmann                         #
-#                                                       #
-# CONSTANTS SCRIPT                                      #
-#                                                       #
-# This script contains the constants used in this       #
-# project and will be called by the main() function.    #
-#########################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Master's Thesis - Remote Sensing                      %
+# Environmental Engineering - ISA/UL - Lisbon, Portugal %
+# (c) 2014 by Jonas Schmedtmann                         %
+#                                                       %
+# CONSTANTS SCRIPT                                      %
+#                                                       %
+# This script contains the constants used in this       %
+# project and will be called by the main() function.    %
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 #Caminhos para shapefiles e imagens de satelite

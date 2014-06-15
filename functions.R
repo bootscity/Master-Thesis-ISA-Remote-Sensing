@@ -1,13 +1,13 @@
-#########################################################
-# Master's Thesis - Remote Sensing                      #
-# Environmental Engineering - ISA/UL - Lisbon, Portugal #
-# (c) 2014 by Jonas Schmedtmann                         #
-#                                                       #
-# FUNCTIONS SCRIPT                                      #
-#                                                       #
-# This script contains the functions used by the main   #
-# sript. Each function is documented (in portuguese).   #
-#########################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Master's Thesis - Remote Sensing                      %
+# Environmental Engineering - ISA/UL - Lisbon, Portugal %
+# (c) 2014 by Jonas Schmedtmann                         %
+#                                                       %
+# FUNCTIONS SCRIPT                                      %
+#                                                       %
+# This script contains the functions used by the main   %
+# sript. Each function is documented (in portuguese).   %
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 # Indice de funcoes:
@@ -47,6 +47,7 @@ init  <-  function()
   library(rpart)
   library(subselect)
   library(plotrix)
+  library(kknn)
   
   #Definicao de codigos de culturas
   codigos2005 <<- read.delim("culturas2005.txt",header=T)
@@ -56,6 +57,7 @@ init  <-  function()
   
   #Definicao de constantes
   source('constants.R')
+  cat("\014")
 }
 
 
@@ -681,7 +683,7 @@ constroiTodasParcelas <- function(excluiVazias=TRUE)
         cultura <- parc$atributos$CULTURA
         seq <- parc$atributos$SEQEIRO
         
-        #Obter reflectancias para diferentes datas - média e desvio padrao
+        #Obter reflectancias para diferentes datas - media e desvio padrao
         reflectancias <- obtemConteudoParcela(parc,apenasInterior=TRUE)
         matRef <- matRefNomes <- matrix(nrow=length(reflectancias),ncol=ncol(reflectancias[[1]]))
         for(m in 1:length(reflectancias))
@@ -730,6 +732,79 @@ constroiTodasParcelas <- function(excluiVazias=TRUE)
 }
 
 
+#XX. Funcao classificaKNN
+#   funcao: 
+#   input:  
+#   output: 
+classificaKNN <- function(treino, valid, k, tune=FALSE, kRange=-1)
+{
+  #Optimizacao do classificador
+  if(tune == TRUE)
+  {
+    tune <- tune.knn(treino[,-1], treino[,1], k=kRange)
+    k <- tune[1][[1]][1,1]
+  }
+  
+  #Treino do classificador
+  KNN <- kknn(cultura ~ ., treino, valid[,-1], k=k, kernel='rectangular')
+    
+  #Obtencao das probabilidades principais e secundarias 
+  probs <- KNN$prob
+  probs1 <- as.vector(apply(probs, 1, max))
+  probs2 <- as.vector(apply(probs, 1, function(x) max(x[x!=max(x)])))
+  
+  #Obtencao das classificacoes primarias e secundarias associadas as probabilidades
+  class1 <- class2 <- c()                                         
+  for (i in 1:nrow(probs))
+  {
+    class1[i] <- as.numeric(names(which(probs[i,] == probs1[i])))
+    class2[i] <- as.numeric(names(which(probs[i,] == probs2[i])))
+  }
+  
+  #Data.frame com os resultados obtidos
+  result <- data.frame(verdade=valid[,1],
+                       class1=class1,
+                       prob1=round(probs1, 3),
+                       prob1R=round(probs1, 1),
+                       class2=class2,
+                       prob2=round(probs2, 3),
+                       prob2R=round(probs2, 1))
+  
+  #Validacao e percentagem de classificacoes correctas
+  tabClass <- as.data.frame.matrix(table(class = class1, verdade = valid[,1]))
+  correcTot <- cc(tabClass)
+  
+  #Percentagem de classificacoes correctas em cada cultura
+  correcCult <- c()
+  for(i in 1:ncol(tabClass))
+    correcCult[i] <- tabClass[i,i]/sum(tabClass[,i])
+  names(correcCult) <- names(tabClass)
+  
+  #Percentagem de classificacoes correctas em cada GRUPO de probabilidade
+  tabClassProb <- as.array(table(class = class1, verdade = valid[,1], prob=round(probs1, 1)))
+  correcProb <- c()
+  for (i in 1:length(tabClassProb[1,1,]))
+    correcProb[i] <- cc(tabClassProb[,,i])
+  names(correcProb) <- names(table(round(probs1, 1)))
+  
+  #Percentagem de classificacoes correctas de cada cultura por grupo de proabilidade
+  correcCultProb <- matrix(ncol=ncol(tabClassProb), nrow=length(tabClassProb[1,1,]))
+  for(i in 1:ncol(tabClassProb))
+    for (j in 1:length(tabClassProb[1,1,]))
+      correcCultProb[j,i] <- tabClassProb[i,i,j]/sum(tabClassProb[,i,j])
+  
+  #Construcao do output
+  out<-list(result=result,
+            tabClass=tabClass,
+            tabClassProb=tabClassProb,
+            correcTot=correcTot,
+            correcCult=correcCult,
+            correcProb=correcProb,
+            correcCultProb=correcCultProb,
+            k=k)
+}
+
+
 #XX. Funcao classificaSVM
 #   funcao: 
 #   input:  
@@ -747,7 +822,7 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
   #Treino do classificador
   SVM <- svm(cultura ~ ., data=treino, probability=TRUE, kernel='radial', gamma=gamma, cost=cost)
   
-  #Obtenção das probabilidades principais e secundarias 
+  #Obtencao das probabilidades principais e secundarias 
   probs <- attr(predict(SVM, valid[,-1], probability=T), "prob")
   probs1 <- as.vector(apply(probs, 1, max))
   probs2 <- as.vector(apply(probs, 1, function(x) max(x[x!=max(x)])))
@@ -763,9 +838,11 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
   #Data.frame com os resultados obtidos
   result <- data.frame(verdade=valid[,1],
                        class1=class1,
-                       prob1=round(probs1, 2),
+                       prob1=round(probs1, 3),
+                       prob1R=round(probs1, 1),
                        class2=class2,
-                       prob2=round(probs2, 2))
+                       prob2=round(probs2, 3),
+                       prob2R=round(probs2, 1))
   
   #Validacao e percentagem de classificacoes correctas
   tabClass <- as.data.frame.matrix(table(class = class1, verdade = valid[,1]))
@@ -794,12 +871,38 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
             gamma=gamma,
             cost=cost)
 }
-
+ 
 
 #XX. Funcao cc
 #   funcao: Calcula a correccao da classificacao duma tabela de erro dada
 #   input:  
 #   output: 
 cc <- function(m) return(sum(diag(as.matrix(m)))/sum(m))
+
+
+#XX. Funcao condensaMatriz
+#   funcao: 
+#   input:  
+#   output: 
+condensaMatriz <- function(m, ind)
+{
+  x <- y <- seq(0,0,nrow(m))
+  m <- as.matrix(m)
+  for(i in 1:length(ind))
+    x <- x + as.vector(m[ind[i],])
+  m[ind[1],] <- x
+  
+  for(i in 1:length(ind))
+    y <- y + as.vector(m[,ind[i]])
+  m[,ind[1]] <- y
+  
+  m<-m[-ind[-1],-ind[-1]]
+  print(cc(m))
+  return(m)
+}
+
+
+
+
 
 

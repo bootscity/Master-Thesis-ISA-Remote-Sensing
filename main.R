@@ -1,14 +1,14 @@
-#########################################################
-# Master's Thesis - Remote Sensing                      #
-# Environmental Engineering - ISA/UL - Lisbon, Portugal #
-# (c) 2014 by Jonas Schmedtmann                         #
-#                                                       #
-# MAIN SCRIPT                                           #
-#                                                       #
-# Implements the program logic using functions from     #
-# functions.R. All steps typically found in remote      #
-# sensing can be found here. Documented in portuguese.  #
-#########################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Master's Thesis - Remote Sensing                      %
+# Environmental Engineering - ISA/UL - Lisbon, Portugal %
+# (c) 2014 by Jonas Schmedtmann                         %
+#                                                       %
+# MAIN SCRIPT                                           %
+#                                                       %
+# Implements the program logic using functions from     %
+# functions.R. All steps typically found in remote      %
+# sensing can be found here. Documented in portuguese.  %
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 #Indice de passos seguidos:
@@ -19,12 +19,14 @@
 #   05. 06. 07. ESCOLHA/TREINO/VALIDACAO DOS CLASSIFICADORES
 
 
-##########################################################################################
-# 1. AQUISICAO DE DADOS E PROCESSAMENTO                                                  #
-##########################################################################################
+#CMD+CTRL+S: save all
+#CTRL+ALT+->: go to other file
+#CMD+SHIFT+P: run previous selection
 
-#Clear console
-cat("\014")
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 1. AQUISICAO DE DADOS E PROCESSAMENTO                                               ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #Iniciar
 source('functions.R')
@@ -49,17 +51,17 @@ listaTodasParcelasIniciais <- constroiTodasParcelas()
 
 
 
-##########################################################################################
-# 2. SELECCAO DE DADOS                                                                   #
-##########################################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 2. SELECCAO DE DADOS                                                                ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Excluir a partida codigos que fazem sentido considerar
 codExclusao  <-  c(87,88,666)
 listaTodasParcelas <- listaTodasParcelasIniciais[!(listaTodasParcelasIniciais$cultura %in% codExclusao),]
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Determinar as culturas que ocupam maior parte da ?rea (90% ou 95%)
 
 #Todas as culturas com respectiva area total
@@ -81,7 +83,7 @@ fraccaoInfl <- sum(cultInfl$area)/areaTotal
 cultInfluentes <- cultInfl$cultura
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Seleccionar apenas aquelas que representam 95% da area e reclassificar
 listaTodasParcelas <- listaTodasParcelas[listaTodasParcelas$cultura %in% cultInfluentes,]
 
@@ -96,14 +98,15 @@ for(i in 1:length(listaTodasParcelas$cultura))
 
 
 
-##########################################################################################
-# 3. ANALISE EXPLORATORIA DOS DADOS COMPLETOS                                            #
-##########################################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3. ANALISE EXPLORATORIA DOS DADOS COMPLETOS                                         ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-##########################################################################
-#ANOVA para averiguar se cultura e parcela afectam reflectancias
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3.1 ANOVA para averiguar se cultura e parcela afectam reflectancias ----
 
-###################
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Primeira abordagem
 dadosANOVA <- constroiDadosANOVA(ano=2005,data=5,banda=1,dimAmostra=15)
 table(dadosANOVA$cultura)
@@ -126,7 +129,7 @@ shapiro.test(dadosANOVA$reflectancias)
 plot(dadosANOVA$reflectancias)
 
 
-###############
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Nova abordagem - averigua so se a cultura tem efeitos sobre cada uma das combinacoes banda/data e NDVI's
 FValues <- c()
 pValues <- c()
@@ -148,8 +151,8 @@ resultadoANOVA$FValues <- as.numeric(as.character(resultadoANOVA$FValues))
 resultadoANOVA <- resultadoANOVA[order(-resultadoANOVA$FValues),]
 
 
-##########################################################################
-#Assinaturas espectrais POR CULTURA
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3.2 Assinaturas espectrais POR CULTURA ----
 
 #Assinaturas todas
 assinaturas <- matrix(nrow=0,ncol=length(BANDAS.LANDSAT))
@@ -189,8 +192,8 @@ for(i in 1:nrow(assinaturasPorCulturaD3))
 lines(BANDAS.LANDSAT,assinaturasPorCulturaD3[1,3:8],col='red',lwd=5)
 
 
-##########################################################################
-#NDVI's por cultura
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3.3 NDVI's por cultura ----
 NDVIPorCulturaD4 <- dados[,list(area=sum(area),
                               NDVI_1=mean(NDVI_1),
                               NDVI_2=mean(NDVI_2),
@@ -218,8 +221,8 @@ lines(datasGrafico,NDVIPorCulturaD4[1,3:10],col='red',lwd=5)
 
 
 
-##########################################################################
-#Historgramas/densidades
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3.4 Historgramas/densidades ----
 
 #Histogramas
 h <- hist(listaTodasParcelas$B4_d1,breaks=50,prob=T)
@@ -246,8 +249,8 @@ hist(listaTodasParcelas$B4_d1,breaks=20)
 qqnorm(listaTodasParcelas$B4_d1)
 shapiro.test(listaTodasParcelas$B4_d1[1:5000])
 
-##########################################################################
-#Vizualizacao 3D dos dados nas 3 variaveis mais importantes
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3.5 Vizualizacao 3D dos dados nas 3 variaveis mais importantes ----
 
 #Seleccao das 3 var's mais importantes
 trim.matrix(cor(dadosTreino[,-1]),0.5)
@@ -281,13 +284,13 @@ points3d(x=dadosTreino$B3_d3[dadosTreino$cultura == 13],
 
 
 
-##########################################################################################
-# 4. SELECCAO DE VARIAVEIS                                                               #
-##########################################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 4. SELECCAO DE VARIAVEIS                                                            ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-##########################################################################
-#CONJUNTO COMPLETO
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 4.1 Conjunto completo ----
 
 #Preparacao dos dados para os classificadores - Apenas assinaturas espectrais das primeiras 6 datas
 dadosClassificadores <- listaTodasParcelas[,c(5,7:12,15:20,23:28,31:36,39:44,47:52)]
@@ -302,8 +305,8 @@ dadosTreino <- dadosClassificadores[amostra,]
 dadosValidacao <- dadosClassificadores[-amostra,]
 
 
-##########################################################################
-#SUB-CONJUNTO DO CONJUNTO COMPLETO
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 4.2 Sub-conjunto do conjunto completo ----
 
 #Usando a funcao trim.matrix do package subselect
 dadosTrim <- listaTodasParcelas[,c(5,(7:54))]
@@ -327,237 +330,117 @@ dadosValidacaoSub <- dadosClassificadoresSub[-amostra,]
 #NDVI's sao melhores mas mesmo assim piores que reflectancias
 
 
-##########################################################################################
-# 5. 6. 7. ESCOLHA/TREINO/VALIDACAO DOS CLASSIFICADORES                                  #
-##########################################################################################
-
-#QUESTOES:
-# - Como vamos poder validar isto sem as declaracoes? 
 
 
-##########################################################################
-#1. KNN - K VIZINHOS MAIS PROXIMOS
-
-###################
-#TODOS OS DADOS
-classCult.knn <- knn(dadosTreino[,-1], dadosValidacao[,-1], dadosTreino[,1], prob=TRUE, k=10)
-classCult.knn.tune <- tune.knn(dadosTreino[,-1], dadosTreino[,1], k=1:20);classCult.knn.tune
-melhorK <- classCult.knn.tune[1][[1]][1,1]
-
-#Validacao
-resultadoCult.knn <- table(pred=classCult.knn, true=dadosValidacao[,1]);resultadoCult.knn
-resultadoCult.knn <- as.data.frame.matrix(resultadoCult.knn)
-classDiag.knn <- diag(as.matrix(resultadoCult.knn));classDiag.knn
-certos.knn <- sum(classDiag.knn)/sum(resultadoCult.knn);certos.knn
-
-#Probabilidades
-probs.knn <- unlist(attributes(classCult.knn),use.names=FALSE)
-probs.knn <- as.numeric(probs.knn[-(1:(nClasses+1))])
-probs.round.knn <- round(probs.knn,1)
-hist(probs.knn,col='blue')
-table(pred=classCult.knn, true=dadosValidacao[,1], probs=probs.round.knn)
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 5. 6. 7. ESCOLHA/TREINO/VALIDACAO DOS CLASSIFICADORES                               ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-###################
-#APENAS SUB-CONJUNTO DE DADOS
-classCultSub.knn <- knn(dadosTreinoSub[,-1], dadosValidacaoSub[,-1], dadosTreinoSub[,1], prob=TRUE, k=10)
-classCultSub.tune.knn <- tune.knn(dadosTreinoSub[,-1], dadosTreinoSub[,1], k=1:20);classCult.knn.sub.tune
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 5.1 KNN - K vizinhos mais proximos ----
 
-#Validacao
-resultadoCultSub.knn <- table(pred=classCultSub.knn, true=dadosValidacaoSub[,1]);resultadoCultSub.knn
-resultadoCultSub.knn <- as.data.frame.matrix(resultadoCultSub.knn)
-classDiagSub.knn <- diag(as.matrix(resultadoCultSub.knn));classDiagSub.knn
-certosSub.knn <- sum(classDiagSub.knn)/sum(resultadoCultSub.knn);certosSub.knn
+#Todos os dados
+KNN.comp <- classificaKNN(treino=dadosTreino, valid=dadosValidacao, k=10)
 
-#Probabilidades
-probsSub.knn <- unlist(attributes(classCultSub.knn),use.names=FALSE)
-probsSub.knn <- as.numeric(probsSub.knn[-(1:(nClasses+1))])
-probsSub.round.knn <- round(probsSub.knn,1)
-hist(probsSub.knn,col='green')
-table(pred=classCultSub.knn, true=dadosValidacaoSub[,1], probs=probsSub.round.knn)
+#Apenas sub-conjunto de dados
+KNN.sub  <- classificaKNN(treino=dadosTreinoSub, valid=dadosValidacaoSub, k=10)
+
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 5.2 SVM - Maquinas de vectores de suporte ----
+
+#Todos os dados
+SVM.comp <- classificaSVM(treino=dadosTreino, valid=dadosValidacao, gamma=0.1, cost=3)
+
+#Tuning
+gamma=seq(0, 1, by = .1))
+gamma=0.1, cost=seq(1, 10, by = 1))
+
+
+#Apenas sub-conjunto de dados
+SVM.sub  <- classificaSVM(treino=dadosTreinoSub, valid=dadosValidacaoSub, gamma=0.2, cost=2)
+
+#Tuning
+gamma=seq(0, 0.5, by = .1)
+gamma=0.2, cost=seq(1, 8, by = 1)
+
+
+#Juntar codigos 1,2,6 na tabela de erro
+condensaMatriz(SVM.sub$tabClass, c(1,2,6))
+
+
+
+
 
 #So com P >= 60%
-jjj <- table(pred=classCultSub.knn, true=dadosValidacaoSub[,1], probs=probsSub.round.knn)
+jjj <- SVM.sub$tabClassProb
 jjj <- as.matrix(jjj[,,5]+jjj[,,6]+jjj[,,7]+jjj[,,8]+jjj[,,9])
 sum(diag(jjj))/sum(jjj)
+condensaMatriz(jjj, c(1,2,6))
 
 
-###################
-#ANALISE GRAFICA
+#Tentativa grafica de escolha da P ideal
+plot(unique(sort(SVM.sub$result$prob1,T)),cumsum(rev(table(SVM.sub$result$prob1))))
+abline(v=0.6)
+
+#Relacionar com areas?
+
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 5.3 Comparacao de KNN e SVM para conjunto total e sub-conjunto ----
+
 #Percentagem de classificacoes correctas em cada cultura
-percCertos <- c()
-for(i in 1:ncol(resultadoCult.knn))
-  percCertos[i] <- resultadoCult.knn[i,i]/sum(resultadoCult.knn[,i])
-percCertos <- 100*percCertos
-
-percCertosSub <- c()
-for(i in 1:ncol(resultadoCult.knn))
-  percCertosSub[i] <- resultadoCultSub.knn[i,i]/sum(resultadoCultSub.knn[,i])
-percCertosSub <- 100*percCertosSub
-
 par(las=2, mar=c(8,4.5,1,1))
-barplot(rbind(percCertos,percCertosSub), beside=T, space=c(0,2.5), border=NA, names.arg=codigosNovos2005$codNomesAbrev[1:14], ylab='Percentagem de classificacoes correctas (%)', ylim=c(0,100), col=c(rgb(0,0,0),rgb(0.7,0.7,0.7)));box()
-legend(x=30, y=98, legend=c("Completo","Sub-conjunto"), fill=c(rgb(0,0,0),rgb(0.7,0.7,0.7)))
+barplot(rbind(KNN.comp$correcCult,KNN.sub$correcCult,SVM.comp$correcCult,SVM.sub$correcCult), 
+        beside=T, 
+        space=c(0,2), 
+        border=NA, 
+        names.arg=codigosNovos2005$codNomesAbrev[1:14], 
+        ylab='Classificacoes correctas', 
+        ylim=c(0,1), 
+        col=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)));box()
+legend(x=34, y=0.98,
+       legend=c("KNN Completo","KNN Sub-conjunto","SVM Completo","SVM Sub-conjunto"),
+       fill=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)))
 
 
 #Percentagem de classificacoes correctas em cada valor de probabilidade
-classProb <- table(pred=classCult.knn, true=dadosValidacao[,1], probs=probs.round.knn)
-percCertos <- c()
-for (i in 1:length(classProb[1,1,]))
-{
-  diag <- diag(as.matrix(classProb[,,i]))
-  percCertos[i] <- sum(diag)/sum(classProb[,,i])
-}
-percCertos <- 100*percCertos
-
-classProbSub <- table(pred=classCultSub.knn, true=dadosValidacaoSub[,1], probs=probsSub.round.knn)
-percCertosSub <- c()
-for (i in 1:length(classProbSub[1,1,]))
-{
-  diag <- diag(as.matrix(classProbSub[,,i]))
-  percCertosSub[i] <- sum(diag)/sum(classProbSub[,,i])
-}
-percCertosSub <- 100*percCertosSub
-
 par(las=1, mar=c(4.5,4.5,1,1))
-barplot(rbind(percCertos,percCertosSub), beside=T, space=c(0,2.5), border=NA, ylab='Percentagem de classificacoes correctas (%)', xlab='Probabilidade associada a classificao (%)', ylim=c(0,100), names.arg=seq(20,100,10),  col=c(rgb(0,0,0),rgb(0.7,0.7,0.7)));box()
-legend(x=2, y=98, legend=c("Completo","Sub-conjunto"), fill=c(rgb(0,0,0),rgb(0.7,0.7,0.7)))
-
+barplot(rbind(KNN.comp$correcProb,KNN.sub$correcProb,SVM.comp$correcProb,SVM.sub$correcProb),
+        beside=T,
+        space=c(0,2.5),
+        border=NA,
+        ylab='Classificacoes correctas',
+        xlab='Probabilidade associada a classificao',
+        ylim=c(0,1),
+        col=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)));box()
+legend(x=2, y=0.98,
+       legend=c("KNN Completo","KNN Sub-conjunto","SVM Completo","SVM Sub-conjunto"),
+       fill=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)))
 
 
 #Frequencia da ocorrencia de cada valor de probabilidade
-compProbs.knn <- rbind(table(probs.round.knn),table(probsSub.round.knn))
-barplot(compProbs.knn, beside=T, space=c(0,4), legend=c("Completo","Sub-conjunto"), border=NA, col=c(rgb(0,0,0),rgb(0.7,0.7,0.7)));box()
+barplot(rbind(table(KNN.comp$result$prob1R),table(KNN.sub$result$prob1R),table(SVM.comp$result$prob1R),table(SVM.sub$result$prob1R)), 
+        beside=T, 
+        ylim=c(0,410), 
+        space=c(0,2.5),
+        border=NA,
+        ylab='Frequencia',
+        xlab='Probabilidade associada a classificao',
+        col=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)));box()
+legend(x=43.5, y=405,
+       legend=c("KNN Completo","KNN Sub-conjunto","SVM Completo","SVM Sub-conjunto"),
+       fill=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)))
 
 
-
-
-
-##########################################################################
-#2. SVM - MAQUINAS DE VECTORES DE SUPORTE
-
-###################
-#TODOS OS DADOS
-classCult.svm <- svm(cultura ~ ., data=dadosTreino, probability=TRUE, kernel='radial', gamma=0.1, cost=3)
-plot(classCult.svm, dadosTreino, B3_d3 ~ B4_d3)
-
-#Tuning
-classCult.tune.svm <- tune.svm(dadosTreino[,-1], dadosTreino[,1], gamma=seq(0, 1, by = .1));classCult.tune.svm
-classCult.tune.svm <- tune.svm(dadosTreino[,-1], dadosTreino[,1], gamma=0.1, cost=seq(1, 10, by = 1));classCult.tune.svm
-classCult.tune.svm <- tune.svm(dadosTreino[,-1], dadosTreino[,1], gamma=seq(0, 0.2, by=0.1), cost=seq(2, 4, by=1));classCult.tune.svm
-
-
-#Validacao
-validacao.svm <- predict(classCult.svm, dadosValidacao[,-1])
-resultadoCult.svm <- table(pred = validacao.svm, true = dadosValidacao[,1]);resultadoCult.svm
-resultadoCult.svm <- as.data.frame.matrix(resultadoCult.svm)
-classDiag.svm <- diag(as.matrix(resultadoCult.svm));classDiag.svm
-certos.svm <- sum(classDiag.svm)/sum(resultadoCult.svm);certos.svm
-
-#Probabilidades
-probs.svm <- predict(classCult.svm, dadosValidacao[,-1], probability=T)
-probs.svm <- attr(probs.svm, "prob")
-probs.svm <- as.vector(apply(probs.svm,1,max))
-probs.round.svm <- round(probs.svm,1)
-hist(probs.round.svm, breaks=14, col='blue')
-table(pred=validacao.svm, true=dadosValidacao[,1], probs=probs.round.svm)
-
-
-
-
-
-
-
-###################
-#APENAS SUB-CONJUNTO DE DADOS
-
-SVM <- classificaSVM(treino=dadosTreinoSub, valid=dadosValidacaoSub, gamma=0.2, cost=2)
-
-
-classCultSub.svm <- svm(cultura ~ ., data=dadosTreinoSub, probability=TRUE, kernel='radial', gamma=0.2, cost=2)
-plot(classCultSub.svm, dadosTreinoSub, B3_d3 ~ B4_d3)
-
-#Tuning
-classCultSub.tune.svm <- tune.svm(dadosTreinoSub[,-1], dadosTreinoSub[,1], gamma=seq(0, 0.5, by = .1));classCultSub.tune.svm
-classCultSub.tune.svm <- tune.svm(dadosTreinoSub[,-1], dadosTreinoSub[,1], gamma=0.2, cost=seq(1, 8, by = 1));classCultSub.tune.svm
-
-
-
-
-#Validacao
-validacaoSub.svm <- class1 <- predict(classCultSub.svm, dadosValidacaoSub[,-1])
-resultadoCultSub.svm <- table(pred = validacaoSub.svm, true = dadosValidacaoSub[,1]);resultadoCultSub.svm
-resultadoCultSub.svm <- as.data.frame.matrix(resultadoCultSub.svm)
-classDiagSub.svm <- diag(as.matrix(resultadoCultSub.svm));classDiagSub.svm
-certosSub.svm <- sum(classDiagSub.svm)/sum(resultadoCultSub.svm);certosSub.svm
-
-
-#Probabilidades
-probsSub.svm <- predict(classCultSub.svm, dadosValidacaoSub[,-1], probability=T)
-probsSub.svm <- attr(probsSub.svm, "prob")
-probMax1Sub.svm <- as.vector(apply(probsSub.svm,1,max))
-probMax2Sub.svm <- as.vector(apply(probsSub.svm,1, function(x) max(x[x!=max(x)])))
-table(pred=validacaoSub.svm, true=dadosValidacaoSub[,1], probs=probMax1Sub.svm)
-
-class1 <- c()
-for (i in 1:nrow(probsSub.svm))
-  class1[i] <- as.numeric(names(which(probsSub.svm[i,] == probMax1Sub.svm[i])))
-
-class2 <- c()
-for (i in 1:nrow(probsSub.svm))
-  class2[i] <- as.numeric(names(which(probsSub.svm[i,] == probMax2Sub.svm[i])))
-
-names(resultadoCultSub.svm)
-
-#Resultados sob forma de data.frame
-x<-as.data.frame(cbind(verdade=dadosValidacaoSub[,1],
-                       class1=class1,
-                       prob1=round(probMax1Sub.svm,3),
-                       class2=class2,
-                       prob2=round(probMax2Sub.svm,3)))
-
-x[21:40,]
-
-probsSub.svm[13,]
-probMax2Sub.svm[13]
-names(which(probsSub.svm[15,] == probMax2Sub.svm[15]))
-
-
-x[x$class1==x$class2,]
-probsSub.svm['p1382278736002.302.00',]
-
-
-table(dadosValidacaoSub[,1],class1)
-
-
-
-#Tentar juntar codigos 1,2,6 na tabela de erro
-resultadoCultSub.svm
-jjj<-resultadoCultSub.svm
-jjj[1,]<-jjj[1,]+jjj[2,]+jjj[6,]
-jjj[,1]<-jjj[,1]+jjj[,2]+jjj[,6]
-jjj<-jjj[-c(2,6),-c(2,6)]
-sum(diag(as.matrix(jjj)))/sum(jjj)
-
-
-#So com P >= 60%
-jjj <- table(pred=validacaoSub.svm, true=dadosValidacaoSub[,1], probs=probMax1Sub.svm)
-jjj <- as.matrix(jjj[,,5]+jjj[,,6]+jjj[,,7]+jjj[,,8]+jjj[,,9])
-sum(diag(jjj))/sum(jjj)
-jjj[1,]<-jjj[1,]+jjj[2,]+jjj[6,]
-jjj[,1]<-jjj[,1]+jjj[,2]+jjj[,6]
-jjj<-jjj[-c(2,6),-c(2,6)]
-sum(diag(as.matrix(jjj)))/sum(jjj)
-
-#Tentativa de escolha da P ideal
-plot(unique(sort(probMax1Sub.svm,T)),cumsum(rev(table(probMax1Sub.svm))))
-abline(v=0.6)
-
-
-
-
-
-
-#Relacionar com areas?
+#Percentagem de classificacoes correctas em cada valor de probabilidade POR cultura
+plot(seq(0.2,1,0.1), KNN.comp$correcCultProb[,1], type='l', ylim=c(0,1))
+lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,2], col=2)
+lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,4], col=4)
+lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,5], col=5)
+lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,6], col=6)
 
 

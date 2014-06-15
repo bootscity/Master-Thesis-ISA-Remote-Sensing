@@ -1,13 +1,13 @@
-#########################################################
-# Master's Thesis - Remote Sensing                      #
-# Environmental Engineering - ISA/UL - Lisbon, Portugal #
-# (c) 2014 by Jonas Schmedtmann                         #
-#                                                       #
-# LATEX SCRIPT                                          #
-#                                                       #
-# This script takes care of exporting tables and plots  #
-# to LaTeX using tikzDevice and xtable                  #
-#########################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Master's Thesis - Remote Sensing                      %
+# Environmental Engineering - ISA/UL - Lisbon, Portugal %
+# (c) 2014 by Jonas Schmedtmann                         %
+#                                                       %
+# LATEX SCRIPT                                          %
+#                                                       %
+# This script takes care of exporting tables and plots  %
+# to LaTeX using tikzDevice and xtable                  %
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 #Init

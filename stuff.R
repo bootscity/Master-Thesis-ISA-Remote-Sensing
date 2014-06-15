@@ -1,20 +1,20 @@
-#########################################################
-# Master's Thesis - Remote Sensing                      #
-# Environmental Engineering - ISA/UL - Lisbon, Portugal #
-# (c) 2014 by Jonas Schmedtmann                         #
-#                                                       #
-# "STAFF" SCRIPT                                        #
-#                                                       #
-# This script contains random chunks of code like       #
-# experiments, no longer used code or just informations #
-#########################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Master's Thesis - Remote Sensing                      %
+# Environmental Engineering - ISA/UL - Lisbon, Portugal %
+# (c) 2014 by Jonas Schmedtmann                         %
+#                                                       %
+# "STAFF" SCRIPT                                        %
+#                                                       %
+# This script contains random chunks of code like       %
+# experiments, no longer used code or just informations %
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
 
-##########################################################################################
-#   ABORDAGEM INICIAL:    CRITERIO 1 --- UTILIZACAOO DE DIFERENTES CLASSIFICADORES       #
-##########################################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#   ABORDAGEM INICIAL:    CRITERIO 1 --- UTILIZACAOO DE DIFERENTES CLASSIFICADORES    ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #Classificadores utilizados:
 # 1. LDA - An??lise discriminante linear
@@ -23,7 +23,7 @@
 # 4. ??rvores de decis??o
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #0. PREPARA????O E VISUALIZA????O DOS DADOS
 
 #Cria????o dos dados com as seguintes caracteristicas:
@@ -91,7 +91,7 @@ points3d(x=dadosTreino$B3_d5[dadosTreino$pastagem == 1],
 pairs(~B4_d2+B4_d3+B4_d5, data=dadosTreino)
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #1. LDA - ANALISE DISCRIMINANTE LINEAR 
 
 #Treino do classificador
@@ -114,7 +114,7 @@ class.lda.opt$subsets
 colnames(dadosTreino[,class.lda.opt$subsets])
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #2. SVM - M??QUINAS DE VECTORES DE SUPORTE
 
 #Treino do classificador
@@ -132,7 +132,7 @@ resultado.svm <- table(pred = validacao.svm, true = dadosValidacao[,1]);resultad
 classAgreement(resultado.svm)
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #3. KNN - K VIZINHOS MAIS PR??XIMOS
 
 #Treino e valida????o simultanea
@@ -144,7 +144,7 @@ classAgreement(resultado.knn)
 class.knn.tune <- tune.knn(dadosTreino[,-1], dadosTreino[,1], k = 1:20);class.knn.tune
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #4. ??RVORES DE DECIS??O
 
 #Ajuste inicial da ??rvore
@@ -163,7 +163,7 @@ class.tree.prune <- prune.tree(class.tree,best=opt)
 plot(class.tree.prune);text(class.tree.prune,cex=.8)
 
 
-#####
+
 #OUTRA ABORDAGEM COM OUTRO PACKAGE QUE PARECE SER MELHOR
 #Treino do classificador
 class.tree2 <- ctree(pastagem ~ ., data=dadosTreino)
@@ -174,7 +174,7 @@ validacao.tree2 <- predict(class.tree2, dadosValidacao[,-1])
 resultado.tree2 <- table(pred = validacao.tree2, true = dadosValidacao[,1]);resultado.tree2
 classAgreement(resultado.tree2)
 
-#####
+
 #mais uma abordagem
 class.tree3 <- rpart(pastagem ~ ., data=dadosTreino)
 plot(class.tree3)
@@ -185,7 +185,7 @@ validacao.tree3 <- predict(class.tree3, dadosValidacao[,-1],type="class")
 resultado.tree3 <- table(pred = validacao.tree3, true = dadosValidacao[,1]);resultado.tree3
 classAgreement(resultado.tree3)
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #5. REGRESS??O LOG??STICA MULTINOMIAL
 
 #Com package NNET
@@ -201,12 +201,12 @@ resultado.multi <- table(pred = validacao.multi, true = dadosValidacao[,1]);resu
 
 
 
-##########################################################################################
-#   EXPERIENCIAS                                                                         #
-##########################################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#   EXPERIENCIAS                                                                      ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Experiencia de estimacao das densidades de probabilidade de cada classe de
 #culturas com metodo KNN, do tipo P(x|C_i), ao contrario do tradicional P(C_i|x)
 
@@ -242,7 +242,7 @@ plot(sort(probs))
 hist(probs,breaks=20)
 
 
-#########
+
 #Experiencia com 2 dimensoes e pontos aleatorios
 x <- sample(seq(1,20,0.1),10,replace=T)
 y <- sample(seq(1,20,0.1),10,replace=T)
@@ -257,12 +257,12 @@ distancias <- sort(as.matrix(dist(rbind(cbind(novo.x,novo.y),cbind(x,y))))[-1,1]
 distKVizinho <- distancias[5]
 
 draw.circle(novo.x,novo.y,distKVizinho,border='red')
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Experiencias com NDVI's (apenas para ano 2005)
 
 #Fazer plot
@@ -286,11 +286,11 @@ for(i in 1:100)
 for(i in 1:100)
   lines(datasGrafico,todasParcelasREG[i,55:62],ylim=c(-1,1),col='darkolivegreen3',lty=1,pch=16)
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Experi??ncias com outros indices de vegeta??ao
 
 listaTodasParcelas$NDVI_1[50]
@@ -308,12 +308,12 @@ abline(lm(NDVId4.orig~NDVId4),col='red')
 MSAVId4 <- (2*nir+1-sqrt((2*nir+1)^2-8*(nir-red)))/2
 plot(NDVId4,MSAVId4)
 abline(lm(MSAVId4~NDVId4),col='red')
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
 
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Experimentar diferen??a entre usar apenas os interiores das parcelas e usar parcelas inteiras
 testeTotInt <- matrix(nrow=0,ncol=5)
 for(i in 1:length(listaDados))
@@ -347,7 +347,7 @@ length(testeTotInt[testeTotInt[,1] == 0,1])/length(testeTotInt[,1])  #% de parce
 length(testeTotInt[testeTotInt[,3] == 0,3])/length(testeTotInt[,3])  #% de parcelas sem pixeis -- interior
 
 table(as.vector(testeTotInt[,2] > testeTotInt[,4]))   #Numero de vezes que sd ?? maior utilizando a fronteira
-##########################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
@@ -355,9 +355,9 @@ table(as.vector(testeTotInt[,2] > testeTotInt[,4]))   #Numero de vezes que sd ??
 
 
 
-##########################################################################################
-#   CAIXOTE DO LIXO                                                                      #
-##########################################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#   CAIXOTE DO LIXO                                                                   ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 #Bom livro em PT
@@ -433,11 +433,11 @@ classSubselect
 
 
 
-##########################################################################################
-#   TESTES  DE APRENDIZAGEM DE NOVAS FUNÇÕES DO R                                        #
-##########################################################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#   TESTES  DE APRENDIZAGEM DE NOVAS FUNÇÕES DO R                                     ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-###############################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
 #USING APPLY
 j <- c(3,4,5,-2,4,-3)
 j[j<0]
@@ -453,7 +453,7 @@ apply(m, 2, function(j) mean(j[j>0]))
 sapply(1:3, function(x) x^2)  #Returns vector
 lapply(1:3, function(x) x^2)  #Returns lsit
 
-########################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
 #more stuff
 colnames(m) <- c('method1', 'method2', 'method3')
 head(m)
@@ -491,7 +491,7 @@ do.call(rbind, foo)
 
 
 
-#########################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
 #using apply for lists
 mylist <- list()
 for(i in 1:5) {
