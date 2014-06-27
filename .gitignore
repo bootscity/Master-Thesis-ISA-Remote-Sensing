@@ -1,3 +1,17 @@
 .Rproj.user
 .Rhistory
 .RData
+
+.RDataTmp
+
+*.txt
+
+*.png
+
+*.pdf
+
+*.Robj
+
+*.xls
+
+*.xlsx

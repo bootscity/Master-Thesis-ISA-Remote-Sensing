@@ -48,6 +48,8 @@ init  <-  function()
   library(subselect)
   library(plotrix)
   library(kknn)
+  library(tikzDevice)
+  library(xtable)
   
   #Definicao de codigos de culturas
   codigos2005 <<- read.delim("culturas2005.txt",header=T)
@@ -759,7 +761,8 @@ classificaKNN <- function(treino, valid, k, tune=FALSE, kRange=-1)
   }
   
   #Data.frame com os resultados obtidos
-  result <- data.frame(verdade=valid[,1],
+  result <- data.frame(parcela=rownames(valid),
+                       verdade=valid[,1],
                        class1=class1,
                        prob1=round(probs1, 3),
                        prob1R=round(probs1, 1),
@@ -833,7 +836,8 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
   }
   
   #Data.frame com os resultados obtidos
-  result <- data.frame(verdade=valid[,1],
+  result <- data.frame(parcela=rownames(valid),
+                       verdade=valid[,1],
                        class1=class1,
                        prob1=round(probs1, 3),
                        prob1R=round(probs1, 1),
@@ -841,55 +845,50 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
                        prob2=round(probs2, 3),
                        prob2R=round(probs2, 1))
   
-  #Validacao e percentagem de classificacoes correctas
+  #Matriz de erro e percentagem de classificacoes correctas
   tabClass <- as.data.frame.matrix(table(class = class1, verdade = valid[,1]))
   correcTot <- cc(tabClass)
   
-  #Percentagem de classificacoes correctas em cada cultura
-  correcCult <- c()
-  for(i in 1:ncol(tabClass))
-    correcCult[i] <- tabClass[i,i]/sum(tabClass[,i])
-  names(correcCult) <- names(tabClass)
+  #User's e producer's accuracy
+  userA <- diag(as.matrix(tabClass))/rowSums(tabClass)
+  prodA <- diag(as.matrix(tabClass))/colSums(tabClass)      #(classificacoes correctas em cada cultura)
+  names(userA) <- names(prodA) <- names(tabClass)
   
-  #Percentagem de classificacoes correctas em cada GRUPO de probabilidade
+  #Matriz de erro e percentagem de classificacoes correctas POR GRUPO de probabilidade
   tabClassProb <- as.array(table(class = class1, verdade = valid[,1], prob=round(probs1, 1)))
   correcProb <- c()
   for (i in 1:length(tabClassProb[1,1,]))
     correcProb[i] <- cc(tabClassProb[,,i])
   names(correcProb) <- names(table(round(probs1, 1)))
   
-  #Percentagem de classificacoes correctas de cada cultura por grupo de proabilidade
-  correcCultProb <- matrix(ncol=ncol(tabClassProb), nrow=length(tabClassProb[1,1,]))
-  for(i in 1:ncol(tabClassProb))
-    for (j in 1:length(tabClassProb[1,1,]))
-      correcCultProb[j,i] <- tabClassProb[i,i,j]/sum(tabClassProb[,i,j])
+  
   
   #Construcao do output
   out<-list(result=result,
             tabClass=tabClass,
             tabClassProb=tabClassProb,
             correcTot=correcTot,
-            correcCult=correcCult,
-            correcProb=correcProb,
-            correcCultProb=correcCultProb,
+            userA=userA,
+            prodA=prodA,
+            probs=round(probs,3),
             gamma=gamma,
             cost=cost)
 }
- 
 
-#XX. Funcao cc
-#   funcao: Calcula a correccao da classificacao duma tabela de erro dada
-#   input:  
-#   output: 
+
+
+
+
+
+#Pequenas funcoes de ajuda
+squareTable <- function(x,y) {
+  commonLevels <- unique(c(levels(x), levels(y)))
+  x <- factor(x, levels = commonLevels)
+  y <- factor(y, levels = commonLevels)
+  return(table(x,y))
+}
 cc <- function(m) return(sum(diag(as.matrix(m)))/sum(m))
-
-
-#XX. Funcao condensaMatriz
-#   funcao: 
-#   input:  
-#   output: 
-condensaMatriz <- function(m, ind)
-{
+condensaMatriz <- function(m, ind) {
   x <- y <- seq(0,0,nrow(m))
   m <- as.matrix(m)
   for(i in 1:length(ind))

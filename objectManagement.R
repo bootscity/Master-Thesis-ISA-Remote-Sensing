@@ -11,18 +11,18 @@
 
 
 #Carregar objectos grandes
-load("cdg2005.Robj")
-load("todasImagens2005.Robj")
-load("listaDados2005.Robj")
-load("listaTodasParcelasIniciais2005.Robj")
 
+load("todasImagens2005_15.06.Robj")
+load('listaDados2005_15.06.Robj')
+load("listaTodasParcelas2005_15.06.Robj")
+load('listaTodasParcelasIniciais2005_15.06.Robj')
 
 #Gravar objectos grandes como ficheiros
-save(cdg, file="cdg2005.Robj")
-save(todasImagens, file="todasImagens2005.Robj")
-save(listaDados, file="listaDados2005.Robj")
+
+save(cdg, file='cdg2005_15.06.Robj')
+save(todasImagens, file="todasImagens2005_15.06.Robj")
+save(listaDados, file='listaDados2005_15.06.Robj')
 save(listaTodasParcelasIniciais, file="listaTodasParcelasIniciais2005_15.06.Robj")
-save(listaTodasParcelasIniciaisSD, file="listaTodasParcelasIniciaisSD2005.Robj")
 save(listaTodasParcelas, file="listaTodasParcelas2005_15.06.Robj")
 
 

@@ -97,6 +97,7 @@ nClasses <- length(table(novasClasses$novaClasse))
 
 for(i in 1:length(listaTodasParcelas$cultura))
   listaTodasParcelas$cultura[i] <- novasClasses$novaClasse[which(novasClasses$cultura==listaTodasParcelas$cultura[i])]
+#Este objecto esta guardado como ficheiro .Robj
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -180,6 +181,8 @@ assinaturasPorCulturaD3 <- dados[,list(area=sum(area),
                                      B5_d3=mean(B5_d3),
                                      B6_d3=mean(B6_d3)),by=cultura]
 assinaturasPorCulturaD3 <- as.data.frame(assinaturasPorCulturaD3)
+assinaturasPorCulturaD3 <- assinaturasPorCulturaD3[order(assinaturasPorCulturaD3$cultura, decreasing = F),]
+
 
 plot(BANDAS.LANDSAT,assinaturasPorCulturaD3[1,3:8],type='l',ylim=c(min(assinaturasPorCulturaD3$B6_d3),max(assinaturasPorCulturaD3$B4_d3)))
 text(5,assinaturasPorCulturaD3[1,7],assinaturasPorCulturaD3[1,1])
@@ -329,7 +332,7 @@ dadosValidacaoSub <- dadosClassificadoresSub[-amostra,]
 #So usar SD's da resultados muito maus, e mesmo misturando SD's com medias da resultados maus
 #NDVI's sao melhores mas mesmo assim piores que reflectancias
 
-
+dadosValidacaoSubAreas <- listaTodasParcelas$area[-amostra]
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -367,25 +370,85 @@ gamma=seq(0, 0.5, by = .1)
 gamma=0.2, cost=seq(1, 8, by = 1)
 
 
-#Juntar codigos 1,2,6 na tabela de erro
-condensaMatriz(SVM.comp$tabClass, c(1,2,5,8,9))
 
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Tentativa de implementacao do algoritmo a partir da formulacao
+
+
+c <- length(SVM.sub$tabClass)
+lambda <- 0.8
+qi <- c()
+
+#Para cada cultura
+for(i in 1:c)
+  #Ir aumentanto o valor do limite q
+  for(q in seq(0, 1, by = 0.01))
+  {
+    Rq <- SVM.sub$result[SVM.sub$result$prob1 >= q,]
+    matriz <- as.data.frame.matrix(squareTable(x = Rq$class1, y = Rq$verdade))  #para garantir que é quadrada
+    confiancas <- diag(as.matrix(matriz))/rowSums(matriz)
+    confianca.i <- confiancas[i]
+    
+    #Sair quando a confianca nao consegue atingir lambda pretendido
+    if(is.na(confianca.i)) qi[i] <- -1; break
+    
+    #Sair quando q e suficientemente grande para garantir lambda
+    if(confianca.i >= lambda) qi[i] <- q; break
+  }
+names(qi) <- names(SVM.sub$tabClass)
+
+
+#Segundo este plot os resultados fazem todo o sentido :D
+plot(SVM.sub$userA,qi)
+
+
+
+
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Experiencias para encontrar bom algoritmo para toma decisão final
+
+xx <- SVM.sub$tabClassProb[,,9]+SVM.sub$tabClassProb[,,8]+SVM.sub$tabClassProb[,,7]
+diag(as.matrix(xx))/rowSums(xx)   #Esta é a user's accuracy (linhas)
+
+#grafico de confiança vs. num ou % de parcelas em que se toma uma decisao 
+
+#Juntar codigos 1,2,6 na tabela de erro
 SVM.comp$tabClass
+condensaMatriz(SVM.comp$tabClass, c(2,5,8,9))
+
+SVM.comp$result[1:10,]
 
 
 #Tentativa de escolha da P ideal: classificacoes correctas se escolhermos apenas classificaoes com P >= x
 correcCum <- c()
-for (i in length(SVM.sub$tabClassProb[1,1,]):1)
+correcCumCult <- matrix(data=0, nrow=length(SVM.sub$tabClassProb[1,1,]),ncol=dim(SVM.sub$tabClassProb[,,1])[2])
+for (i in 1:length(SVM.sub$tabClassProb[1,1,]))
 {
   m <- matrix(data=0, nrow=dim(SVM.sub$tabClassProb[,,1])[1], ncol=dim(SVM.sub$tabClassProb[,,1])[2])
-  for (j in length(SVM.sub$tabClassProb[1,1,]):i)
+  for (j in i:length(SVM.sub$tabClassProb[1,1,]))
     m <- m + SVM.sub$tabClassProb[,,j]
+  
+  #Correccao total
   correcCum[i] <- cc(m)
+  
+  #Correccao para cada cultura
+  for (j in 1:dim(SVM.sub$tabClassProb[,,1])[2])
+    correcCumCult[i,j] <- m[j,j]/sum(m[,j])
 }
-correcCum <- rev(correcCum)
 
-plot(seq(1,0.2,-0.1),correcCum,xlim=c(1,0.2),type='l')
+#Correccao acumulada total
+plot(seq(0.2,1,0.1),correcCum,xlim=c(1,0.2),type='l',ylim=c(0.2,1)xlab='Probabilidade maxima',ylab='Classificacoes correctas')
 abline(h=0.8, col='red')
+
+#Correccao acumulada para cada cultura
+plot(seq(0.2,1,0.1),correcCumCult[,1],xlim=c(1,0.2),type='l',ylim=c(0,1),xlab='Probabilidade maxima',ylab='Classificacoes correctas')
+abline(h=0.8, col='red')
+for(i in 2:ncol(correcCumCult))
+  lines(seq(0.2,1,0.1),correcCumCult[,i],xlim=c(1,0.2),col=i)
+
 
 #SUGESTAO:
 #Podemos fixar um nivel de qualidade desejado (eixo do y, exemplo de 80% de classificacoes correctas) e fazer uma curva deste genero para cada classe e ver que valor de probabilidade é o minimo aceitavel para assegurar o nivel desejado.
@@ -394,17 +457,15 @@ abline(h=0.8, col='red')
 #Depois dá jeito tambem ver a quantidade de parcelas que podemos de facto classsifcar fixando um valor de probabilidade x.
 
 
-#Relacionar com sequeiro
-plot(listaTodasParcelas[-amostra,6], SVM.comp$result$prob1)
-boxplot(SVM.comp$result$prob1 ~ listaTodasParcelas[-amostra,6])
+
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 5.3 Comparacao de KNN e SVM para conjunto total e sub-conjunto ----
 
-#Percentagem de classificacoes correctas em cada cultura
+#User's accuracies (ALTERAR NO KNN!!!!)
 par(las=2, mar=c(10,4.5,1,1))
-barplot(rbind(KNN.comp$correcCult,KNN.sub$correcCult,SVM.comp$correcCult,SVM.sub$correcCult), 
+barplot(rbind(KNN.comp$correcCult,KNN.sub$correcCult,SVM.comp$userA,SVM.sub$userA), 
         beside=T, 
         space=c(0,2), 
         border=NA, 
@@ -446,6 +507,7 @@ legend(x=1.3, y=1380,
        fill=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)))
 
 
+
 #Percentagem de classificacoes correctas em cada valor de probabilidade POR cultura
 plot(seq(0.2,1,0.1), KNN.comp$correcCultProb[,1], type='l', ylim=c(0,1))
 lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,2], col=2)
@@ -453,4 +515,59 @@ lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,4], col=4)
 lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,5], col=5)
 lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,6], col=6)
 
+
+
+plot(SVM.sub$result$class1, SVM.sub$result$prob1)
+hist(SVM.sub$result$prob1,prob=T)
+lines(density(SVM.sub$result$prob1))
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Cenas para apresentacao IFAP ----
+
+jjj <- cbind(SVM.sub$result,area=dadosValidacaoSubAreas,SVM.sub$probs)
+jjj <- jjj[order(jjj$area, decreasing = TRUE),]
+
+#Exemplo com ALTA probabilidade
+jjj[4,]
+parcNome <- as.character(jjj$parcela[4])
+b2 <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,2]
+b3 <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,3]
+b4 <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,4]
+bX <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,7]
+bY <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,8]
+poly <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['coordsPoly']]
+b2R <- raster(b2, xmn=min(bX), xmx=max(bX), ymn=min(bY), ymx=max(bY), crs=PROJ4.UTM)
+b3R <- raster(b3, xmn=min(bX), xmx=max(bX), ymn=min(bY), ymx=max(bY), crs=PROJ4.UTM)
+b4R <- raster(b4, xmn=min(bX), xmx=max(bX), ymn=min(bY), ymx=max(bY), crs=PROJ4.UTM)
+
+plot(s$layer.1)
+lines(poly,type='l',lwd=4,col='yellow')
+
+s <- stack(b2R,b3R,b4R)
+plotRGB(s, 3, 2, 1, stretch='lin',colNA='black')
+
+out <- cbind(jjj[4,c(3,4)],0.6384283,jjj[4,9])
+colnames(out) <- c('class', 'prob', 'probCult', 'area')
+
+
+#%%%%%%%%%%%%
+#Exemplo com BAIXA probabilidade
+jjj[204,]   #204
+parcNome <- as.character(jjj$parcela[204])
+b2 <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,2]
+b3 <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,3]
+b4 <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,4]
+bX <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,7]
+bY <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['DR']][['d189']][,,8]
+poly <- listaDados[[parcNIFAP(parcNome)]][['a2005']][[parcNome]][['coordsPoly']]
+b2R <- raster(b2, xmn=min(bX), xmx=max(bX), ymn=min(bY), ymx=max(bY), crs=PROJ4.UTM)
+b3R <- raster(b3, xmn=min(bX), xmx=max(bX), ymn=min(bY), ymx=max(bY), crs=PROJ4.UTM)
+b4R <- raster(b4, xmn=min(bX), xmx=max(bX), ymn=min(bY), ymx=max(bY), crs=PROJ4.UTM)
+
+plot(s$layer.1)
+lines(poly,type='l',lwd=4,col='yellow')
+
+s <- stack(b2R,b3R,b4R)
+plotRGB(s, 3, 2, 1, stretch='lin',colNA='black')
 
