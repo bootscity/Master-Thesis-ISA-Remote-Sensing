@@ -25,9 +25,8 @@
 
 
 #1. Funcao init:
-#   funcao: inicializa o programa: carrega packages, define todas as constantes superglobais
-#   input:  NA
-#   output: NA
+#   input:  - NA
+#   output: - NA
 init  <-  function()
 {
   #Carregamento de packages
@@ -64,11 +63,9 @@ init  <-  function()
 
 
 #2. Funcao carregaRecortaDadosEspaciais:
-#   funcao: importar todas as shapefiles necessarias ao trabalho, transformar para sistema de coordenadas
-#           indicado e recortar parcelas pela area de estudo
-#   input:  coordsAreaEstudo: matriz de coordenadas X,Y que vai ser a area de estudo
-#           crs: string de projeccao da classe CRS
-#   output: lista com os diferentes cdg's transformados e recortados (apenas as parelas)
+#   input:  - coordsAreaEstudo: matriz de coordenadas X,Y que vai ser a area de estudo
+#           - crs: string de projeccao da classe CRS
+#   output: - lista com os diferentes cdg's transformados e recortados pela area de estudo (apenas as parelas)
 carregaRecortaDadosEspaciais <- function(coordsAreaEstudo, crs)
 {
   #Ler os dados dos ficheiros shp
@@ -102,13 +99,12 @@ carregaRecortaDadosEspaciais <- function(coordsAreaEstudo, crs)
 
 
 #4. Funcao corrigeLeConjuntoImagensLandsat:
-#   funcao: fazer correccao radiometrica de um conjunto de imagens landsat em formato raster com metodo
-#           DOS4, ou apenas ler imagens ja corrigidas
-#   input:  conjuntoPath: caminho para o conjunto de imagens em formato raster a corrigir
-#           areaEstudo:   cdg com poligono pelo qual as imagens serao cortadas
-#           prefixo:      string que e juntada ao nome original da imagem, na imagem corrigida
-#           corrige:      FALSE se nao for para corrigir as imagens, mas sim ler imagens ja corrigidas
-#   output: lista de imagens corrigidas em formato raster, essas imagens tambem sao escritas em ficheiros
+#   input:  - conjuntoPath: caminho para o conjunto de imagens em formato raster a corrigir
+#           - areaEstudo:   cdg com poligono pelo qual as imagens serao cortadas
+#           - prefixo:      string que e juntada ao nome original da imagem, na imagem corrigida
+#           - corrige:      FALSE se nao for para corrigir as imagens, mas sim ler imagens ja corrigidas
+#   output: - lista de imagens corrigidas com metodo DOS4 em formato raster, essas imagens tambem sao escritas em
+#             ficheiros
 corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo, prefixo, corrige=TRUE)
 {
   out <- list()
@@ -231,14 +227,12 @@ corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo, prefixo, c
 
 
 #5. Funcao constroiListaImagensLandsat:
-#   funcao: construir uma lista com todas as imagens em forma de matriz de todas as datas Landsat que estao
-#           numa dada directoria
-#   input:  landsatPath: caminho para a directoria que contem todas as datas de Landsat
-#           areaEstudo:  cdg com poligono pelo qual as imagens serao cortadas
-#           prefixo:     string que e juntada ao nome original da imagem, na imagem corrigida
-#           anos:        vector com os anos para os quais se pretende obter a lista de imagens
-#           corrige: FALSE se nao for para corrigir as imagens, mas sim ler imagens ja corrigidas
-#   output: lista com todas as datas e imagens Landsat em forma de matriz, incluindo detalhes da imagem
+#   input:  - landsatPath: caminho para a directoria que contem todas as datas de Landsat
+#           - areaEstudo:  cdg com poligono pelo qual as imagens serao cortadas
+#           - prefixo:     string que e juntada ao nome original da imagem, na imagem corrigida
+#           - anos:        vector com os anos para os quais se pretende obter a lista de imagens
+#           - corrige: FALSE se nao for para corrigir as imagens, mas sim ler imagens ja corrigidas
+#   output: - lista com todas as datas e imagens Landsat em forma de matriz, incluindo detalhes da imagem
 constroiListaImagensLandsat <- function(landsatPath, areaEstudo, prefixo, anos=ANOS, corrige=FALSE)
 {
   conjuntos <- list.files(landsatPath, full.names = FALSE)
@@ -295,12 +289,11 @@ constroiListaImagensLandsat <- function(landsatPath, areaEstudo, prefixo, anos=A
 
 
 #6. Funcao constroiListaDados:
-#   funcao: construir uma lista com toda a informacao disponivel sobre parcelas e dados de reflectancias 
-#   input:  
-#   output: lista com toda a informacao disponivel sobre parcelas e dados de reflectancias, tendo esta forma:
-#   lista$nNIFAP$aANO$pPARCELA$DR$dDATA$bBANDA
-#                             $atributos
-#                             $coordsPoly
+#   input:  - anos: anos que devem ser incluidos na lista de dados
+#   output: - lista com toda a informacao disponivel sobre parcelas e dados de reflectancias, tendo esta forma:
+#               lista$nNIFAP$aANO$pPARCELA$DR$dDATA$bBANDA
+#                                         $atributos
+#                                         $coordsPoly
 constroiListaDados <- function(anos=ANOS)
 {
   todosNIFAP <- c(cdg$parc2005@data$NIFAP)#, cdg$parc2004@data$NIFAP, cdg$parc2005@data$NIFAP)
@@ -415,10 +408,11 @@ constroiListaDados <- function(anos=ANOS)
 
 
 #XX. Funcao obtemConteudoParcela
-#   funcao: 
-#   input:  
-#   output: lista que para cada data tem uma matriz que tem uma coluna para cada banda, contendo todas as
-#           reflectancias
+#   input:  - parcela:        parcela sob forma de lista
+#           - apenasInterior: TRUE/FALSE a indicar se apenas devem ser considerados os pixeis no interior da parc
+#           - excluiVizinhos: TRUE/FALSE que pode seleccionar apenas pixeis que nao se toquem
+#   output: - lista que para cada data tem uma matriz que tem uma coluna para cada banda, contendo todas as
+#             reflectancias
 obtemConteudoParcela <- function(parcela, apenasInterior=TRUE, excluiVizinhos=FALSE)
 {
   out <- list()
@@ -501,9 +495,9 @@ obtemConteudoParcela <- function(parcela, apenasInterior=TRUE, excluiVizinhos=FA
 
 
 #XX. Funcao parcNDVI
-#   funcao: 
-#   input:  
-#   output: lista que para cada data tem o NDVI de cada pixel na parcela
+#   input:  - parcela:        parcela sob forma de lista
+#           - apenasInterior: TRUE/FALSE a indicar se apenas devem ser considerados os pixeis no interior da parc
+#   output: - lista que para cada data tem o NDVI de cada pixel na parcela
 parcNDVI <- function(parcela, apenasInterior=TRUE)
 {
   out <- list()
@@ -520,9 +514,8 @@ parcNDVI <- function(parcela, apenasInterior=TRUE)
 
 
 #XX. Funcao parcNIFAP
-#   funcao: 
-#   input:  
-#   output: NIFAP ao qual pertence a parcela introduzida
+#   input:  - nomeParc: string na forma 'pXXXXXXXXXXXXX.XXX.XX' com nome da parcela cujo NIFAP se pretende saber 
+#   output: - NIFAP ao qual pertence a parcela introduzida
 parcNIFAP<-function(nomeParc)
 {
   for(i in 1:length(listaDados))
@@ -536,9 +529,11 @@ parcNIFAP<-function(nomeParc)
 
 
 #XX. Funcao constroiDadosANOVA
-#   funcao: 
-#   input:  
-#   output: data.frame com dados organizados para se efectuar uma ANOVA hierarquizada
+#   input:  - ano:        ano em analise
+#           - data:       data em analise
+#           - banda:      banda espectral em analise
+#           - dimAmostra: numero de NIFAP's cujas parcelas se pretendem analisar
+#   output: - data.frame com dados organizados para se efectuar uma ANOVA hierarquizada
 constroiDadosANOVA <- function(ano, data, banda, dimAmostra)
 {
   #ano <- which(ANOS==ano)    Isto so vai funcionar quando a listaDados tiver todos os anos
@@ -575,12 +570,11 @@ constroiDadosANOVA <- function(ano, data, banda, dimAmostra)
 
 
 #XX. Funcao verificaAprovacaoFinalValidacao
-#   funcao: 
-#   input:  NIFAP: string na forma 'nXXXXXX' com o numero do processo que se pretende verificar. Para
-#                  efeitos de VALIDACAO, o processo de entrada e composto por parcelas cuja ocupacao
-#                  do solo e CONHECIDA
-#           ano:   ano para o qual foi feita a verificacao
-#   output: 0/1 se o processo obtem aprovacao de financiamento - VALIDACAO
+#   input:  - NIFAP:  string na forma 'nXXXXXX' com o numero do processo que se pretende verificar. Para
+#                     efeitos de VALIDACAO, o processo de entrada e composto por parcelas cuja ocupacao
+#                     do solo e CONHECIDA
+#           - ano:    ano para o qual foi feita a verificacao
+#   output: - 0/1 se o processo obtem aprovacao de financiamento - VALIDACAO
 verificaAprovacaoFinalValidacao <- function(NIFAP, ano)
 {
   processo <- listaDados[[NIFAP]][[paste0("a",ano)]]
@@ -659,9 +653,8 @@ verificaAprovacaoFinalValidacao <- function(NIFAP, ano)
 
 
 #XX. Funcao constroiTodasParcelas
-#   funcao: 
-#   input:  
-#   output: data.frame com informacoes relevantes sobre todas as parcelas existentes na listaDados
+#   input:  - excluiVazias: TRUE/FALSE a indicar se as parcelas com NA devem ser excluidas
+#   output: - data.frame com dados relevantes sobre todas as parcelas existentes na lista de dados
 constroiTodasParcelas <- function(excluiVazias=TRUE)
 {
   count <- 1
@@ -731,88 +724,18 @@ constroiTodasParcelas <- function(excluiVazias=TRUE)
 }
 
 
-#XX. Funcao classificaKNN
-#   funcao: 
-#   input:  
-#   output: 
-classificaKNN <- function(treino, valid, k, tune=FALSE, kRange=-1)
+#XX. Funcao treinaValida
+#   input:  - ver 'validacaoCruzada'
+#   output: - ver 'validacaoCruzada'
+treinaValida <- function(tipo, treino, valid, tune=FALSE, k=NA, gamma=NA, cost=NA, kRange=NA, gammaRange=NA, costRange=NA)
 {
-  #Optimizacao do classificador
-  if(tune == TRUE)
+  #Optimizacao do classificador se for pedido
+  if(tune == TRUE & tipo == 'KNN')
   {
     tune <- tune.knn(treino[,-1], treino[,1], k=kRange)
     k <- tune[1][[1]][1,1]
   }
-  
-  #Treino do classificador
-  KNN <- kknn(cultura ~ ., treino, valid[,-1], k=k, kernel='rectangular')
-    
-  #Obtencao das probabilidades principais e secundarias 
-  probs <- KNN$prob
-  probs1 <- as.vector(apply(probs, 1, max))
-  probs2 <- as.vector(apply(probs, 1, function(x) max(x[x!=max(x)])))
-  
-  #Obtencao das classificacoes primarias e secundarias associadas as probabilidades
-  class1 <- class2 <- c()                                         
-  for (i in 1:nrow(probs))
-  {
-    class1[i] <- as.numeric(names(which(probs[i,] == probs1[i])))
-    class2[i] <- as.numeric(names(which(probs[i,] == probs2[i])))
-  }
-  
-  #Data.frame com os resultados obtidos
-  result <- data.frame(parcela=rownames(valid),
-                       verdade=valid[,1],
-                       class1=class1,
-                       prob1=round(probs1, 3),
-                       prob1R=round(probs1, 1),
-                       class2=class2,
-                       prob2=round(probs2, 3),
-                       prob2R=round(probs2, 1))
-  
-  #Validacao e percentagem de classificacoes correctas
-  tabClass <- as.data.frame.matrix(table(class = class1, verdade = valid[,1]))
-  correcTot <- cc(tabClass)
-  
-  #Percentagem de classificacoes correctas em cada cultura
-  correcCult <- c()
-  for(i in 1:ncol(tabClass))
-    correcCult[i] <- tabClass[i,i]/sum(tabClass[,i])
-  names(correcCult) <- names(tabClass)
-  
-  #Percentagem de classificacoes correctas em cada GRUPO de probabilidade
-  tabClassProb <- as.array(table(class = class1, verdade = valid[,1], prob=round(probs1, 1)))
-  correcProb <- c()
-  for (i in 1:length(tabClassProb[1,1,]))
-    correcProb[i] <- cc(tabClassProb[,,i])
-  names(correcProb) <- names(table(round(probs1, 1)))
-  
-  #Percentagem de classificacoes correctas de cada cultura por grupo de proabilidade
-  correcCultProb <- matrix(ncol=ncol(tabClassProb), nrow=length(tabClassProb[1,1,]))
-  for(i in 1:ncol(tabClassProb))
-    for (j in 1:length(tabClassProb[1,1,]))
-      correcCultProb[j,i] <- tabClassProb[i,i,j]/sum(tabClassProb[,i,j])
-  
-  #Construcao do output
-  out<-list(result=result,
-            tabClass=tabClass,
-            tabClassProb=tabClassProb,
-            correcTot=correcTot,
-            correcCult=correcCult,
-            correcProb=correcProb,
-            correcCultProb=correcCultProb,
-            k=k)
-}
-
-
-#XX. Funcao classificaSVM
-#   funcao: 
-#   input:  
-#   output: 
-classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1, costRange=-1)
-{
-  #Optimizacao do classificador
-  if(tune == TRUE)
+  else if(tune == TRUE & tipo == 'SVM')
   {
     tune <- tune.svm(treino[,-1], treino[,1], gamma=gammaRange, cost=costRange)
     gamma <- tune[1][[1]][1,1]
@@ -820,15 +743,23 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
   }
   
   #Treino do classificador
-  SVM <- svm(cultura ~ ., data=treino, probability=TRUE, kernel='radial', gamma=gamma, cost=cost)
+  if(tipo == 'KNN')
+  {
+    classificador <- kknn(cultura ~ ., treino, valid[,-1], k=k, kernel='rectangular')
+    probs <- classificador$prob
+  }
+  else if(tipo == 'SVM')
+  {
+    classificador <- svm(cultura ~ ., data=treino, probability=TRUE, kernel='radial', gamma=gamma, cost=cost)
+    probs <- attr(predict(classificador, valid[,-1], probability=T), "prob")
+  }
   
   #Obtencao das probabilidades principais e secundarias 
-  probs <- attr(predict(SVM, valid[,-1], probability=T), "prob")
   probs1 <- as.vector(apply(probs, 1, max))
   probs2 <- as.vector(apply(probs, 1, function(x) max(x[x!=max(x)])))
   
   #Obtencao das classificacoes primarias e secundarias associadas as probabilidades
-  class1 <- class2 <- c()                                         
+  class1 <- class2 <- c() 
   for (i in 1:nrow(probs))
   {
     class1[i] <- as.numeric(names(which(probs[i,] == probs1[i])))
@@ -836,14 +767,12 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
   }
   
   #Data.frame com os resultados obtidos
-  result <- data.frame(parcela=rownames(valid),
-                       verdade=valid[,1],
-                       class1=class1,
-                       prob1=round(probs1, 3),
-                       prob1R=round(probs1, 1),
-                       class2=class2,
-                       prob2=round(probs2, 3),
-                       prob2R=round(probs2, 1))
+  resultValid <- data.frame(parcela=rownames(valid),
+                            verdade=valid[,1],
+                            class1=class1,
+                            prob1=round(probs1, 3),
+                            class2=class2,
+                            prob2=round(probs2, 3))
   
   #Matriz de erro e percentagem de classificacoes correctas
   tabClass <- as.data.frame.matrix(table(class = class1, verdade = valid[,1]))
@@ -861,22 +790,148 @@ classificaSVM <- function(treino, valid, gamma, cost, tune=FALSE, gammaRange=-1,
     correcProb[i] <- cc(tabClassProb[,,i])
   names(correcProb) <- names(table(round(probs1, 1)))
   
-  
-  
   #Construcao do output
-  out<-list(result=result,
+  out<-list(classificador=classificador,
+            resultValid=resultValid,
             tabClass=tabClass,
             tabClassProb=tabClassProb,
             correcTot=correcTot,
             userA=userA,
             prodA=prodA,
             probs=round(probs,3),
+            k=k,
             gamma=gamma,
             cost=cost)
 }
 
 
+#XX. Funcao fixaLimiteQ
+#   input:  - ver 'validacaoCruzada'
+#   output: - ver 'validacaoCruzada'
+fixaLimiteQ <- function(classificador, lambda)
+{
+  #Estabelecimento do limite
+  c <- length(classificador$tabClass)
+  qi <- c()
+  todasConfiancas <- matrix(rep(NA, length(seq(0, 1, by = 0.01))*c), byrow = F, ncol = c)
+  
+  #Para cada cultura
+  for(i in 1:c)
+    #Ir aumentanto o valor do limite q
+    for(q in seq(0, 1, by = 0.01))
+    {
+      Rq <- classificador$result[classificador$result$prob1 >= q,]
+      matriz <- as.data.frame.matrix(squareTable(x = Rq$class1, y = Rq$verdade))  #para garantir que e quadrada
+      confiancas <- diag(as.matrix(matriz))/rowSums(matriz)
+      confianca.i <- confiancas[i]
+      todasConfiancas[q*100+1,i] <- confianca.i
+      
+      #Sair quando a confianca nao consegue atingir lambda pretendido
+      if(is.na(confianca.i)) {qi[i] <- 10; break}
+      
+      #Sair quando q e suficientemente grande para garantir lambda
+      if(confianca.i >= lambda) {qi[i] <- q; break}
+    }
+  names(qi) <- names(classificador$tabClass)
+  
+  #Analise da quantidade de parcelas com decisao em funcao de lambda
+  nParcDec <- c() #Numero de parcelas com decisao, por cultura
+  for(i in 1:c)
+    nParcDec[i] <- nrow(SVM.sub$result[SVM.sub$result$verdade == i & SVM.sub$result$prob1 >= qi[i],])
+  
+  nParcTot <- table(SVM.sub$result$verdade)
+  percParcDec <- nParcDec/nParcTot    #Percentagem de parcelas com decisao, por cultura
+  percTotDec <- sum(nParcDec)/length(SVM.sub$result$verdade)  #Percentagem de parcelas com decisao, total
+  
+  #Output dos resultados
+  return(list(qi=qi,
+              todasConfiancas=todasConfiancas,
+              nParcDec=nParcDec,
+              percParcDec=percParcDec,
+              percTotDec=percTotDec))
+}
 
+
+#XX. Funcao validacaoCruzada
+#   input:  - n:           cs
+#           - tipo:        'KNN' ou 'SVM'
+#           - dados:       totalidade dos dados de parcelas (daqui serao seleccionados treino e validacao)
+#           - lambda:      nivel de 'confianca' desejado
+#           - tune:        TRUE/FALSE conforme se deseja fazer o tuning
+#           - k:           KNN: numero de classes
+#           - gamma:       SVM: parametro gamma
+#           - cost:        SVM: parametro de custo
+#           - kRange:      KNN: gama de k para o tune, se for desejado
+#           - gammaRange:  SVM: gama de gamma para o tune, se for desejado
+#           - costRange:   SVM: gama de cost para o tune, se for desejado
+#   output: lista com resultados da validacao cruzada efectuada, contendo 2 elementos:
+#           - lista resultTodos (resultados em cada uma das n validacoes 'folds')
+#           - lista result (media dos resultados mais importantes de resultTodos):
+#               - correcTot:    fraccao total de parcelas bem classificadas
+#               - userA:        user's accuracy
+#               - prodA:        producer's accuracy
+#               - k:            numero de classes para classificador KNN
+#               - gamma:        para classificador SVM
+#               - cost:         para classificador SMV
+#               - qi:           limites de 'confianca' para as i classes
+#               - nParcDec:     numero de parcelas em que e' tomada uma decisao em cada classe
+#               - percParcDec:  percentagem de parcelas em que e' tomada uma decisao em cada classe
+#               - percTotDec:   percentagem global de parcelas em que e' tomada uma decisao
+#               - percsDecs:    percentagem global de parcelas em que e' tomada uma decisao para varios lambda's
+validacaoCruzada <- function(n, tipo, dados, lambda, tune=FALSE, k=NA, gamma=NA, cost=NA, kRange=NA, gammaRange=NA, costRange=NA)
+{
+  #Estas sao as particoes que FICAM DE FORA em cada uma das validacoes
+  resultTodos <- result <- list()
+  set.seed(23)
+  particoes <- createFolds(dados$cultura, k = n)
+  
+  #Fazer n validacoes
+  for(i in 1:n)
+  {
+    print(paste0('A processar validacao ', i, ' de ', n, '...'))
+    
+    #Seleccao dos dados a partir dos folds criados
+    dadosTrein <- dados[-particoes[[i]],]
+    dadosValid <- dados[particoes[[i]],]
+    
+    #Treina e valida o classificador e fixa os limites qi
+    classificador <- treinaValida(tipo, dadosTrein, dadosValid, tune=FALSE, k=k, gamma=gamma, cost=cost, kRange=kRange, gammaRange=gammaRange, costRange=costRange)
+    qiLimite <- fixaLimiteQ(classificador, lambda)
+    
+    #Percentagem de parcelas em que se toma uma decisao em funcao da gama de lambdas (0.5:1.0)
+    lambdas <- seq(0.5,1,by=0.05)
+    percsDecs <- c()
+    for(k in 1:length(lambdas))
+      percsDecs[k] <- fixaLimiteQ(classificador = classificador, lambda = lambdas[k])$percTotDec
+
+    #Resultados desta validacao
+    resultTodos[[paste0('valid',i)]] <- c(classificador, qiLimite, percsDecs=list(percsDecs))
+  }
+  
+  #Contrucao dos resultados
+  nomes <- names(resultTodos$valid1$qi)
+  tmp <- unlist(resultTodos, F)
+  result[["correcTot"]] <- as.vector(sapply("correcTot", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["userA"]] <- as.vector(sapply("userA", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  names(result[["userA"]]) <- nomes
+  result[["prodA"]] <- as.vector(sapply("prodA", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  names(result[["prodA"]]) <- nomes
+  result[["k"]] <- as.vector(sapply("k", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["gamma"]] <- as.vector(sapply("gamma", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["cost"]] <- as.vector(sapply("cost", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["qi"]] <- as.vector(sapply("qi", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  names(result[["qi"]]) <- nomes
+  result[["nParcDec"]] <- as.vector(sapply("nParcDec", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  names(result[["nParcDec"]]) <- nomes
+  result[["percParcDec"]] <- as.vector(sapply("percParcDec", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  names(result[["percParcDec"]]) <- nomes
+  result[["percTotDec"]] <- as.vector(sapply("percTotDec", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["percsDecs"]] <- as.vector(sapply("percsDecs", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  names(result[["percsDecs"]]) <- lambdas
+  
+  print("Fim")
+  return(list(result=result, resultTodos=resultTodos))
+}
 
 
 

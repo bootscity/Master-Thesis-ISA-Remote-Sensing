@@ -52,7 +52,7 @@ listaDados <- constroiListaDados(anos=2005)
 listaTodasParcelasIniciais <- constroiTodasParcelas()
 
 
-
+rowMeans(cbind(x, y))
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 2. SELECCAO DE DADOS                                                                ####
@@ -331,8 +331,10 @@ dadosValidacaoSub <- dadosClassificadoresSub[-amostra,]
 
 #So usar SD's da resultados muito maus, e mesmo misturando SD's com medias da resultados maus
 #NDVI's sao melhores mas mesmo assim piores que reflectancias
-
 dadosValidacaoSubAreas <- listaTodasParcelas$area[-amostra]
+
+
+
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -344,10 +346,14 @@ dadosValidacaoSubAreas <- listaTodasParcelas$area[-amostra]
 # 5.1 KNN - K vizinhos mais proximos ----
 
 #Todos os dados
-KNN.comp <- classificaKNN(treino=dadosTreino, valid=dadosValidacao, k=20, tune=TRUE, kRange=c(1,10))
+KNN.comp <- treinaValida(tipo = 'KNN', treino = dadosTreino, valid = dadosValidacao, k = 10)
+qi.KNN.comp <- fixaLimiteQ(classificador = KNN.comp, lambda = 0.8)
+
 
 #Apenas sub-conjunto de dados
-KNN.sub  <- classificaKNN(treino=dadosTreinoSub, valid=dadosValidacaoSub, k=20, tune=TRUE, kRange=c(1,10))
+KNN.sub  <- treinaValida(tipo = 'KNN', treino = dadosTreinoSub, valid = dadosValidacaoSub, k = 10)
+
+#Tuning: kRange=c(1,10)
 
 
 
@@ -355,109 +361,74 @@ KNN.sub  <- classificaKNN(treino=dadosTreinoSub, valid=dadosValidacaoSub, k=20, 
 # 5.2 SVM - Maquinas de vectores de suporte ----
 
 #Todos os dados
-SVM.comp <- classificaSVM(treino=dadosTreino, valid=dadosValidacao, gamma=0.1, cost=3)
+SVM.comp <- treinaValida(tipo = 'SVM', treino = dadosTreino, valid = dadosValidacao, gamma = 0.1, cost = 3)
+qi.SVM.comp <- fixaLimiteQ(classificador = SVM.comp, lambda = 0.8)
 
-#Tuning
-gamma=seq(0, 1, by = .1))
-gamma=0.1, cost=seq(1, 10, by = 1))
+#Tuning: gamma=seq(0, 1, by = .1)) e gamma=0.1, cost=seq(1, 10, by = 1))
 
 
 #Apenas sub-conjunto de dados
-SVM.sub  <- classificaSVM(treino=dadosTreinoSub, valid=dadosValidacaoSub, gamma=0.2, cost=2)
+SVM.sub  <- treinaValida(tipo = 'SVM', treino = dadosTreinoSub, valid = dadosValidacaoSub, gamma = 0.2, cost = 2)
+qi.SVM.sub <- fixaLimiteQ(classificador = SVM.sub, lambda = 0.8)
 
-#Tuning
-gamma=seq(0, 0.5, by = .1)
-gamma=0.2, cost=seq(1, 8, by = 1)
-
+#Tuning: gamma=seq(0, 0.5, by = .1) e gamma=0.2, cost=seq(1, 8, by = 1)
 
 
 
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#Tentativa de implementacao do algoritmo a partir da formulacao
 
 
-c <- length(SVM.sub$tabClass)
-lambda <- 0.8
-qi <- c()
-
-#Para cada cultura
-for(i in 1:c)
-  #Ir aumentanto o valor do limite q
-  for(q in seq(0, 1, by = 0.01))
-  {
-    Rq <- SVM.sub$result[SVM.sub$result$prob1 >= q,]
-    matriz <- as.data.frame.matrix(squareTable(x = Rq$class1, y = Rq$verdade))  #para garantir que é quadrada
-    confiancas <- diag(as.matrix(matriz))/rowSums(matriz)
-    confianca.i <- confiancas[i]
-    
-    #Sair quando a confianca nao consegue atingir lambda pretendido
-    if(is.na(confianca.i)) qi[i] <- -1; break
-    
-    #Sair quando q e suficientemente grande para garantir lambda
-    if(confianca.i >= lambda) qi[i] <- q; break
-  }
-names(qi) <- names(SVM.sub$tabClass)
-
-
-#Segundo este plot os resultados fazem todo o sentido :D
-plot(SVM.sub$userA,qi)
-
-
+SVM.comp.cruz <- validacaoCruzada(n = 10, tipo = 'SVM', dados = dadosClassificadores, lambda = 0.8, gamma = 0.2, cost = 2)
 
 
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#Experiencias para encontrar bom algoritmo para toma decisão final
+#Graficos interessantes
+plot(SVM.sub$result$class1, SVM.sub$result$prob1,ylim=c(0,1))
+points(qi,col='red', bg='red', pch=21)  #Limites qi
+points(as.vector(percParcDec/100), col='blue', bg='blue', pch=21)   #Percentagem em que é tomada uma decisao 
 
-xx <- SVM.sub$tabClassProb[,,9]+SVM.sub$tabClassProb[,,8]+SVM.sub$tabClassProb[,,7]
-diag(as.matrix(xx))/rowSums(xx)   #Esta é a user's accuracy (linhas)
+hist(SVM.sub$result$prob1,prob=T)
+lines(density(SVM.sub$result$prob1))
 
-#grafico de confiança vs. num ou % de parcelas em que se toma uma decisao 
-
-#Juntar codigos 1,2,6 na tabela de erro
-SVM.comp$tabClass
-condensaMatriz(SVM.comp$tabClass, c(2,5,8,9))
-
-SVM.comp$result[1:10,]
+plot(SVM.sub$userA,qi.SVM.sub$qi)
+plot(qi.SVM.sub$percParcDec)
 
 
-#Tentativa de escolha da P ideal: classificacoes correctas se escolhermos apenas classificaoes com P >= x
-correcCum <- c()
-correcCumCult <- matrix(data=0, nrow=length(SVM.sub$tabClassProb[1,1,]),ncol=dim(SVM.sub$tabClassProb[,,1])[2])
-for (i in 1:length(SVM.sub$tabClassProb[1,1,]))
+#Plot das confianças em funçao de q
+plot(seq(0, 1, by = 0.01),todasConfiancas[,1], type='l',ylim=c(0,1))
+for(i in 2:12)
+  lines(seq(0, 1, by = 0.01),todasConfiancas[,i], type='l',col=i)
+abline(h=lambda,col='red')
+
+
+#Percentagem de parcelas em que se toma uma decisao em funcao de lambda
+lambdas <- seq(0.5,1,by=0.05)
+percsDecs.KNN.comp <- percsDecs.KNN.sub <- percsDecs.SVM.comp <- percsDecs.SVM.sub <- c()
+for(k in 1:length(lambdas))
 {
-  m <- matrix(data=0, nrow=dim(SVM.sub$tabClassProb[,,1])[1], ncol=dim(SVM.sub$tabClassProb[,,1])[2])
-  for (j in i:length(SVM.sub$tabClassProb[1,1,]))
-    m <- m + SVM.sub$tabClassProb[,,j]
-  
-  #Correccao total
-  correcCum[i] <- cc(m)
-  
-  #Correccao para cada cultura
-  for (j in 1:dim(SVM.sub$tabClassProb[,,1])[2])
-    correcCumCult[i,j] <- m[j,j]/sum(m[,j])
+  percsDecs.KNN.comp[k] <- fixaLimiteQ(classificador = KNN.comp, lambda = lambdas[k])$percTotDec
+  percsDecs.KNN.sub[k] <- fixaLimiteQ(classificador = KNN.sub, lambda = lambdas[k])$percTotDec
+  percsDecs.SVM.comp[k] <- fixaLimiteQ(classificador = SVM.comp, lambda = lambdas[k])$percTotDec
+  percsDecs.SVM.sub[k] <- fixaLimiteQ(classificador = SVM.sub, lambda = lambdas[k])$percTotDec  
 }
 
-#Correccao acumulada total
-plot(seq(0.2,1,0.1),correcCum,xlim=c(1,0.2),type='l',ylim=c(0.2,1)xlab='Probabilidade maxima',ylab='Classificacoes correctas')
-abline(h=0.8, col='red')
+#KNN
+plot(lambdas*100, percsDecs.KNN.comp*100, xaxt='n', yaxt='n', xlab='Confianca', ylab='Percentagem de parcelas com decisao', ylim=c(0,100), col='green', bg='green', pch=21)
+lines(lambdas*100, percsDecs.KNN.comp*100, col='green')
+#text(lambdas*100, percsDecs*100-6, round(percsDecs*100,1), col='blue', cex=0.75)
+axis(1, at=lambdas*100, labels=lambdas*100)
+axis(2, at=seq(0,100,10), labels=seq(0,100,10))
 
-#Correccao acumulada para cada cultura
-plot(seq(0.2,1,0.1),correcCumCult[,1],xlim=c(1,0.2),type='l',ylim=c(0,1),xlab='Probabilidade maxima',ylab='Classificacoes correctas')
-abline(h=0.8, col='red')
-for(i in 2:ncol(correcCumCult))
-  lines(seq(0.2,1,0.1),correcCumCult[,i],xlim=c(1,0.2),col=i)
+points(lambdas*100, percsDecs.KNN.sub*100, col='yellow', bg='yellow', pch=21)
+lines(lambdas*100, percsDecs.KNN.sub*100, col='yellow')
 
+#SVM
+points(lambdas*100, percsDecs.SVM.comp*100, col='blue', bg='blue', pch=21)
+lines(lambdas*100, percsDecs.SVM.comp*100, col='blue')
 
-#SUGESTAO:
-#Podemos fixar um nivel de qualidade desejado (eixo do y, exemplo de 80% de classificacoes correctas) e fazer uma curva deste genero para cada classe e ver que valor de probabilidade é o minimo aceitavel para assegurar o nivel desejado.
-#Desta forma fica fixo um valor de P=x
-#Talvez perguntar ao IFAP qual o nivel que eles pretendem?
-#Depois dá jeito tambem ver a quantidade de parcelas que podemos de facto classsifcar fixando um valor de probabilidade x.
-
-
-
+points(lambdas*100, percsDecs.SVM.sub*100, col='red', bg='red', pch=21)
+lines(lambdas*100, percsDecs.SVM.sub*100, col='red')
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -465,7 +436,7 @@ for(i in 2:ncol(correcCumCult))
 
 #User's accuracies (ALTERAR NO KNN!!!!)
 par(las=2, mar=c(10,4.5,1,1))
-barplot(rbind(KNN.comp$correcCult,KNN.sub$correcCult,SVM.comp$userA,SVM.sub$userA), 
+barplot(rbind(KNN.comp$userA,KNN.sub$userA,SVM.comp$userA,SVM.sub$userA), 
         beside=T, 
         space=c(0,2), 
         border=NA, 
@@ -507,19 +478,6 @@ legend(x=1.3, y=1380,
        fill=c(rgb(0,0,1,1),rgb(0,0,1,0.5),rgb(1,0,0,1),rgb(1,0,0,0.5)))
 
 
-
-#Percentagem de classificacoes correctas em cada valor de probabilidade POR cultura
-plot(seq(0.2,1,0.1), KNN.comp$correcCultProb[,1], type='l', ylim=c(0,1))
-lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,2], col=2)
-lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,4], col=4)
-lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,5], col=5)
-lines(seq(0.2,1,0.1), KNN.comp$correcCultProb[,6], col=6)
-
-
-
-plot(SVM.sub$result$class1, SVM.sub$result$prob1)
-hist(SVM.sub$result$prob1,prob=T)
-lines(density(SVM.sub$result$prob1))
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

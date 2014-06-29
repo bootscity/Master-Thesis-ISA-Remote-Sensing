@@ -353,6 +353,86 @@ table(as.vector(testeTotInt[,2] > testeTotInt[,4]))   #Numero de vezes que sd ??
 
 
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Experiencias para encontrar bom algoritmo para toma decisão final
+xx <- SVM.sub$tabClassProb[,,9]+SVM.sub$tabClassProb[,,8]+SVM.sub$tabClassProb[,,7]
+diag(as.matrix(xx))/rowSums(xx)   #Esta é a user's accuracy (linhas)
+
+#grafico de confiança vs. num ou % de parcelas em que se toma uma decisao 
+
+#Juntar codigos 1,2,6 na tabela de erro
+SVM.comp$tabClass
+condensaMatriz(SVM.comp$tabClass, c(2,5,8,9))
+
+SVM.comp$result[1:10,]
+
+
+#Tentativa de escolha da P ideal: classificacoes correctas se escolhermos apenas classificaoes com P >= x
+correcCum <- c()
+correcCumCult <- matrix(data=0, nrow=length(SVM.sub$tabClassProb[1,1,]),ncol=dim(SVM.sub$tabClassProb[,,1])[2])
+for (i in 1:length(SVM.sub$tabClassProb[1,1,]))
+{
+  m <- matrix(data=0, nrow=dim(SVM.sub$tabClassProb[,,1])[1], ncol=dim(SVM.sub$tabClassProb[,,1])[2])
+  for (j in i:length(SVM.sub$tabClassProb[1,1,]))
+    m <- m + SVM.sub$tabClassProb[,,j]
+  
+  #Correccao total
+  correcCum[i] <- cc(m)
+  
+  #Correccao para cada cultura
+  for (j in 1:dim(SVM.sub$tabClassProb[,,1])[2])
+    correcCumCult[i,j] <- m[j,j]/sum(m[,j])
+}
+
+#Correccao acumulada total
+plot(seq(0.2,1,0.1),correcCum,xlim=c(1,0.2),type='l',ylim=c(0.2,1)xlab='Probabilidade maxima',ylab='Classificacoes correctas')
+abline(h=0.8, col='red')
+
+#Correccao acumulada para cada cultura
+plot(seq(0.2,1,0.1),correcCumCult[,1],xlim=c(1,0.2),type='l',ylim=c(0,1),xlab='Probabilidade maxima',ylab='Classificacoes correctas')
+abline(h=0.8, col='red')
+for(i in 2:ncol(correcCumCult))
+  lines(seq(0.2,1,0.1),correcCumCult[,i],xlim=c(1,0.2),col=i)
+
+
+#SUGESTAO:
+#Podemos fixar um nivel de qualidade desejado (eixo do y, exemplo de 80% de classificacoes correctas) e fazer uma curva deste genero para cada classe e ver que valor de probabilidade é o minimo aceitavel para assegurar o nivel desejado.
+#Desta forma fica fixo um valor de P=x
+#Talvez perguntar ao IFAP qual o nivel que eles pretendem?
+#Depois dá jeito tambem ver a quantidade de parcelas que podemos de facto classsifcar fixando um valor de probabilidade x.
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+#Dados SHP para professor
+x <- c(494261, 524261, 524261, 494261, 494261)
+y <- c(4301509, 4301509, 4331509, 4331509, 4301509)
+cords <- cbind(x,y)
+cdgProf <- carregaRecortaDadosEspaciais(cords, PROJ4.UTM)
+
+plot(cdgProf$area, add=T)
+plot(cdgProf$parc2005, add=T)
+plot(maio$b3)
+
+#Dados RASTER para professor
+maio <- corrigeLeConjuntoImagensLandsat(conjuntoPath = paste0(CAMINHO.LANDSAT,"/LE72040332005125ASN00"), areaEstudo = cdgProf$area, prefixo = 'CORR_15.06', corrige = FALSE)
+
+for(i in 1:length(maio))
+{
+  maio[[i]] <- crop(maio[[i]], cords)
+  maio[[i]][maio[[i]] == 0] <- NA
+}
+
+junho <- corrigeLeConjuntoImagensLandsat(conjuntoPath = paste0(CAMINHO.LANDSAT,"/LE72040332005157EDC00"), areaEstudo = cdgProf$area, prefixo = 'CORR_15.06', corrige = FALSE)
+
+for(i in 1:length(maio))
+{
+  junho[[i]] <- crop(junho[[i]], cords)
+  junho[[i]][junho[[i]] == 0] <- NA
+}
+
+save(cdgProf, file='cdgProf')
+save(maio, file='maio')
+save(junho, file='junho')
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
