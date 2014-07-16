@@ -60,6 +60,30 @@ dev.off()
 
 
 
+tikz('../05 Escrito/TEX/test.tex',width=4,height=4)
+par(las=1, mar=c(3.2,3.2,1,1), mgp=c(2,0.5,0), tck = 0.012)
+lambdas <- seq(0.5,1,by=0.05)
+plot(lambdas*100,
+     SVM.comp.cruz$result$percsDecs*100,
+     xaxt='n',
+     yaxt='n',
+     xlab='Confianca',
+     ylab='Percentagem de parcelas com decisao',
+     ylim=c(0,100),
+     col=g[1],
+     bg=g[1],
+     pch=21,
+     type='o')
+axis(1, at=lambdas*100, labels=lambdas*100)
+axis(2, at=seq(0,100,10), labels=seq(0,100,10))
+
+points(lambdas*100, SVM.sub.cruz$result$percsDecs*100, col=g[2], bg=g[2], pch=22, type='o')
+points(lambdas*100, KNN.comp.cruz$result$percsDecs*100, col=g[3], bg=g[3], pch=23, type='o')
+points(lambdas*100, KNN.sub.cruz$result$percsDecs*100, col=g[4], bg=g[4], pch=24, type='o')
+dev.off()
+
+
+
 #Quadros
 dados.xtab <- xtable(dadosTreino[1:10,1:5])
 align(dados.xtab) <- rep("c",6)

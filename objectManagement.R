@@ -24,10 +24,11 @@ save(todasImagens, file="todasImagens2005_15.06.Robj")
 save(listaDados, file='listaDados2005_15.06.Robj')
 save(listaTodasParcelasIniciais, file="listaTodasParcelasIniciais2005_15.06.Robj")
 save(listaTodasParcelas, file="listaTodasParcelas2005_15.06.Robj")
-
+save(resultValidCruz, file="resultValidCruz_01.07.Robj")
+save(s, file="stackLE72040332005157EDC00longLat.Robj")
 
 #Eliminar grandes objectos depois de escritos
 rm(listaDados)
 rm(cdg)
 rm(todasImagens)
-
+rm(resultValidCruz)

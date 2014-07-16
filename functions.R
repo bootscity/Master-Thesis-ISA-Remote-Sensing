@@ -49,6 +49,7 @@ init  <-  function()
   library(kknn)
   library(tikzDevice)
   library(xtable)
+  library(caret)
   
   #Definicao de codigos de culturas
   codigos2005 <<- read.delim("culturas2005.txt",header=T)
@@ -105,7 +106,7 @@ carregaRecortaDadosEspaciais <- function(coordsAreaEstudo, crs)
 #           - corrige:      FALSE se nao for para corrigir as imagens, mas sim ler imagens ja corrigidas
 #   output: - lista de imagens corrigidas com metodo DOS4 em formato raster, essas imagens tambem sao escritas em
 #             ficheiros
-corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo, prefixo, corrige=TRUE)
+corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo=FALSE, prefixo, corrige=TRUE)
 {
   out <- list()
   splitConjuntoPath <- strsplit(conjuntoPath, "/")
@@ -123,16 +124,22 @@ corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo, prefixo, c
     #Corrige cada imagem do conjunto dado
     for(j in 1:length(BANDAS.LANDSAT))
     {
+      print(paste0('A processar imagem ', j, ' de ', length(BANDAS.LANDSAT)))
       #Abrir GeoTIFF
       nomeImagem <- paste0(codigoImagens,"_B",BANDAS.LANDSAT[j],".TIF")
       ficheiroImagem <- paste0(conjuntoPath,"/",nomeImagem)
       imagem <- raster(ficheiroImagem)
       
-      #Fazer clip do GEOTIFF pela area de estudo
-      imagemArea <- crop(imagem, areaEstudo)
-      
-      #Mascarar valores que estao fora da area de estudo como NA
-      imagemArea <- mask(x=imagemArea, mask=areaEstudo, updatevalue=NA)
+      if (areaEstudo == FALSE)
+        imagemArea <- imagem
+      else
+      {
+        #Fazer clip do GEOTIFF pela area de estudo
+        imagemArea <- crop(imagem, areaEstudo)
+        
+        #Mascarar valores que estao fora da area de estudo como NA
+        imagemArea <- mask(x=imagemArea, mask=areaEstudo, updatevalue=NA)
+      }
       
       #Converter valores de 0 (FAIXAS PRETAS) para NA
       imagemArea[imagemArea == 0] <- NA
@@ -775,7 +782,7 @@ treinaValida <- function(tipo, treino, valid, tune=FALSE, k=NA, gamma=NA, cost=N
                             prob2=round(probs2, 3))
   
   #Matriz de erro e percentagem de classificacoes correctas
-  tabClass <- as.data.frame.matrix(table(class = class1, verdade = valid[,1]))
+  tabClass <- as.data.frame.matrix(table(class = factor(class1, levels=levels(valid[,1])), verdade = valid[,1]))  
   correcTot <- cc(tabClass)
   
   #User's e producer's accuracy
@@ -784,7 +791,7 @@ treinaValida <- function(tipo, treino, valid, tune=FALSE, k=NA, gamma=NA, cost=N
   names(userA) <- names(prodA) <- names(tabClass)
   
   #Matriz de erro e percentagem de classificacoes correctas POR GRUPO de probabilidade
-  tabClassProb <- as.array(table(class = class1, verdade = valid[,1], prob=round(probs1, 1)))
+  tabClassProb <- as.array(table(class = factor(class1, levels=levels(valid[,1])), verdade = valid[,1], prob=round(probs1, 1)))
   correcProb <- c()
   for (i in 1:length(tabClassProb[1,1,]))
     correcProb[i] <- cc(tabClassProb[,,i])
@@ -820,16 +827,25 @@ fixaLimiteQ <- function(classificador, lambda)
     #Ir aumentanto o valor do limite q
     for(q in seq(0, 1, by = 0.01))
     {
+      #ORIGINAL
       Rq <- classificador$result[classificador$result$prob1 >= q,]
       matriz <- as.data.frame.matrix(squareTable(x = Rq$class1, y = Rq$verdade))  #para garantir que e quadrada
       confiancas <- diag(as.matrix(matriz))/rowSums(matriz)
-      confianca.i <- confiancas[i]
+      confianca.i <- confiancas[i];confianca.i
+      
+      #NOVO
+      Rq <- classificador$result[classificador$result$prob1 >= q & classificador$result$class1 == i,]
+      confianca.i.2 <- nrow(Rq[Rq$verdade == Rq$class1,])/nrow(Rq);confianca.i.2
+      
+      
       todasConfiancas[q*100+1,i] <- confianca.i
       
       #Sair quando a confianca nao consegue atingir lambda pretendido
-      if(is.na(confianca.i)) {qi[i] <- 10; break}
+      if(is.na(confianca.i)) {qi[i] <- 1; break}
       
       #Sair quando q e suficientemente grande para garantir lambda
+      
+      #Sair quando houver alteracao
       if(confianca.i >= lambda) {qi[i] <- q; break}
     }
   names(qi) <- names(classificador$tabClass)
@@ -873,7 +889,7 @@ fixaLimiteQ <- function(classificador, lambda)
 #               - k:            numero de classes para classificador KNN
 #               - gamma:        para classificador SVM
 #               - cost:         para classificador SMV
-#               - qi:           limites de 'confianca' para as i classes
+#               - qi:           limites de probabilidade P(wi|x) que garantem lambda para classe i
 #               - nParcDec:     numero de parcelas em que e' tomada uma decisao em cada classe
 #               - percParcDec:  percentagem de parcelas em que e' tomada uma decisao em cada classe
 #               - percTotDec:   percentagem global de parcelas em que e' tomada uma decisao
@@ -901,8 +917,8 @@ validacaoCruzada <- function(n, tipo, dados, lambda, tune=FALSE, k=NA, gamma=NA,
     #Percentagem de parcelas em que se toma uma decisao em funcao da gama de lambdas (0.5:1.0)
     lambdas <- seq(0.5,1,by=0.05)
     percsDecs <- c()
-    for(k in 1:length(lambdas))
-      percsDecs[k] <- fixaLimiteQ(classificador = classificador, lambda = lambdas[k])$percTotDec
+    for(j in 1:length(lambdas))
+      percsDecs[j] <- fixaLimiteQ(classificador = classificador, lambda = lambdas[j])$percTotDec
 
     #Resultados desta validacao
     resultTodos[[paste0('valid',i)]] <- c(classificador, qiLimite, percsDecs=list(percsDecs))
@@ -911,28 +927,39 @@ validacaoCruzada <- function(n, tipo, dados, lambda, tune=FALSE, k=NA, gamma=NA,
   #Contrucao dos resultados
   nomes <- names(resultTodos$valid1$qi)
   tmp <- unlist(resultTodos, F)
-  result[["correcTot"]] <- as.vector(sapply("correcTot", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
-  result[["userA"]] <- as.vector(sapply("userA", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["correcTot"]] <- as.vector(sapply("correcTot", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["userA"]] <- as.vector(sapply("userA", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["userA"]]) <- nomes
-  result[["prodA"]] <- as.vector(sapply("prodA", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["prodA"]] <- as.vector(sapply("prodA", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["prodA"]]) <- nomes
-  result[["k"]] <- as.vector(sapply("k", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
-  result[["gamma"]] <- as.vector(sapply("gamma", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
-  result[["cost"]] <- as.vector(sapply("cost", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
-  result[["qi"]] <- as.vector(sapply("qi", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["k"]] <- as.vector(sapply("k", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["gamma"]] <- as.vector(sapply("gamma", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["cost"]] <- as.vector(sapply("cost", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["qi"]] <- as.vector(sapply("qi", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["qi"]]) <- nomes
-  result[["nParcDec"]] <- as.vector(sapply("nParcDec", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["nParcDec"]] <- as.vector(sapply("nParcDec", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["nParcDec"]]) <- nomes
-  result[["percParcDec"]] <- as.vector(sapply("percParcDec", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["percParcDec"]] <- as.vector(sapply("percParcDec", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["percParcDec"]]) <- nomes
-  result[["percTotDec"]] <- as.vector(sapply("percTotDec", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
-  result[["percsDecs"]] <- as.vector(sapply("percsDecs", function(x) rowMeans(do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["percTotDec"]] <- as.vector(sapply("percTotDec", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["percsDecs"]] <- as.vector(sapply("percsDecs", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["percsDecs"]]) <- lambdas
   
   print("Fim")
   return(list(result=result, resultTodos=resultTodos))
 }
 
+
+#XX. Funcao classificaProcesso
+#   input:  - 
+#   output: - 
+classificaProcesso <- function(parcelas, qi, ......)
+{
+  #Toma uma decisao acerca de cada parcela -- como?
+  
+  #Confirma se verificam criterios das medidas de greening
+  
+}
 
 
 #Pequenas funcoes de ajuda
@@ -958,8 +985,6 @@ condensaMatriz <- function(m, ind) {
   print(cc(m))
   return(m)
 }
-
-
 
 
 
