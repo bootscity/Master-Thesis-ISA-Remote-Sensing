@@ -734,21 +734,8 @@ constroiTodasParcelas <- function(excluiVazias=TRUE)
 #XX. Funcao treinaValida
 #   input:  - ver 'validacaoCruzada'
 #   output: - ver 'validacaoCruzada'
-treinaValida <- function(tipo, treino, valid, tune=FALSE, k=NA, gamma=NA, cost=NA, kRange=NA, gammaRange=NA, costRange=NA)
+treinaValida <- function(tipo, treino, valid, k=NA, gamma=NA, cost=NA)
 {
-  #Optimizacao do classificador se for pedido
-  if(tune == TRUE & tipo == 'KNN')
-  {
-    tune <- tune.knn(treino[,-1], treino[,1], k=kRange)
-    k <- tune[1][[1]][1,1]
-  }
-  else if(tune == TRUE & tipo == 'SVM')
-  {
-    tune <- tune.svm(treino[,-1], treino[,1], gamma=gammaRange, cost=costRange)
-    gamma <- tune[1][[1]][1,1]
-    cost <- tune[1][[1]][1,2]
-  }
-  
   #Treino do classificador
   if(tipo == 'KNN')
   {
@@ -774,41 +761,38 @@ treinaValida <- function(tipo, treino, valid, tune=FALSE, k=NA, gamma=NA, cost=N
   }
   
   #Data.frame com os resultados obtidos
-  resultValid <- data.frame(parcela=rownames(valid),
-                            verdade=valid[,1],
-                            class1=class1,
-                            prob1=round(probs1, 3),
-                            class2=class2,
-                            prob2=round(probs2, 3))
+  result <- data.frame(parcela=rownames(valid),
+                       verdade=valid[,1],
+                       class1=class1,
+                       prob1=round(probs1, 3))
+                       #class2=class2,
+                       #prob2=round(probs2, 3))
   
   #Matriz de erro e percentagem de classificacoes correctas
-  tabClass <- as.data.frame.matrix(table(class = factor(class1, levels=levels(valid[,1])), verdade = valid[,1]))  
-  correcTot <- cc(tabClass)
+  matErro <- as.data.frame.matrix(table(class = factor(class1, levels=levels(valid[,1])), verdade = valid[,1]))  
+  correcTot <- cc(matErro)
   
   #User's e producer's accuracy
-  userA <- diag(as.matrix(tabClass))/rowSums(tabClass)
-  prodA <- diag(as.matrix(tabClass))/colSums(tabClass)      #(classificacoes correctas em cada cultura)
-  names(userA) <- names(prodA) <- names(tabClass)
+  userA <- diag(as.matrix(matErro))/rowSums(matErro)
+  prodA <- diag(as.matrix(matErro))/colSums(matErro)
+  names(userA) <- names(prodA) <- names(matErro)
   
   #Matriz de erro e percentagem de classificacoes correctas POR GRUPO de probabilidade
-  tabClassProb <- as.array(table(class = factor(class1, levels=levels(valid[,1])), verdade = valid[,1], prob=round(probs1, 1)))
-  correcProb <- c()
-  for (i in 1:length(tabClassProb[1,1,]))
-    correcProb[i] <- cc(tabClassProb[,,i])
-  names(correcProb) <- names(table(round(probs1, 1)))
+#   matErroProb <- as.array(table(class = factor(class1, levels=levels(valid[,1])), verdade = valid[,1], prob=round(probs1, 1)))
+#   correcProb <- c()
+#   for (i in 1:length(matErroProb[1,1,]))
+#     correcProb[i] <- cc(matErroProb[,,i])
+#   names(correcProb) <- names(table(round(probs1, 1)))
   
   #Construcao do output
-  out<-list(classificador=classificador,
-            resultValid=resultValid,
-            tabClass=tabClass,
-            tabClassProb=tabClassProb,
+  out<-list(#classificador=classificador,
+            result=result,
+            matErro=matErro,
+            #matErroProb=matErroProb,
             correcTot=correcTot,
             userA=userA,
             prodA=prodA,
-            probs=round(probs,3),
-            k=k,
-            gamma=gamma,
-            cost=cost)
+            probs=round(probs,3))
 }
 
 
@@ -818,53 +802,59 @@ treinaValida <- function(tipo, treino, valid, tune=FALSE, k=NA, gamma=NA, cost=N
 fixaLimiteQ <- function(classificador, lambda)
 {
   #Estabelecimento do limite
-  c <- length(classificador$tabClass)
+  c <- length(classificador$matErro)
   qi <- c()
-  todasConfiancas <- matrix(rep(NA, length(seq(0, 1, by = 0.01))*c), byrow = F, ncol = c)
+  todasConfiancas <- matrix(rep(NA, length(seq(0, 1, by = 0.001))*c), byrow = F, ncol = c)
   
   #Para cada cultura
   for(i in 1:c)
     #Ir aumentanto o valor do limite q
-    for(q in seq(0, 1, by = 0.01))
+    for(q in seq(0, 1, by = 0.001))
     {
       #ORIGINAL
-      Rq <- classificador$result[classificador$result$prob1 >= q,]
-      matriz <- as.data.frame.matrix(squareTable(x = Rq$class1, y = Rq$verdade))  #para garantir que e quadrada
-      confiancas <- diag(as.matrix(matriz))/rowSums(matriz)
-      confianca.i <- confiancas[i];confianca.i
+#       Rq <- classificador$result[classificador$result$prob1 >= q,]
+#       matriz <- as.data.frame.matrix(squareTable(x = Rq$class1, y = Rq$verdade))  #para garantir que e quadrada
+#       confiancas <- diag(as.matrix(matriz))/rowSums(matriz)
+#       confianca.i <- confiancas[i];confianca.i
       
       #NOVO
       Rq <- classificador$result[classificador$result$prob1 >= q & classificador$result$class1 == i,]
-      confianca.i.2 <- nrow(Rq[Rq$verdade == Rq$class1,])/nrow(Rq);confianca.i.2
+      confianca.i <- nrow(Rq[Rq$verdade == Rq$class1,])/nrow(Rq)
       
+      #Estabelecer a confianca inicial na primeira iteracao
+      if (q == 0) confianca.anterior <- confianca.i
       
-      todasConfiancas[q*100+1,i] <- confianca.i
+      #Meter confianca actual no quadro de todas as confiancas
+      todasConfiancas[q*1000+1,i] <- confianca.i
       
       #Sair quando a confianca nao consegue atingir lambda pretendido
       if(is.na(confianca.i)) {qi[i] <- 1; break}
       
       #Sair quando q e suficientemente grande para garantir lambda
+      #if(confianca.i >= lambda) {qi[i] <- q; break}
       
-      #Sair quando houver alteracao
-      if(confianca.i >= lambda) {qi[i] <- q; break}
+      #Sair quando houver alteracao E quando q e suficientemente grande para garantir lambda
+      if(confianca.i >= lambda & confianca.i != confianca.anterior) {qi[i] <- q; break}
+      confianca.anterior <- confianca.i
     }
-  names(qi) <- names(classificador$tabClass)
+  names(qi) <- names(classificador$matErro)
   
-  #Analise da quantidade de parcelas com decisao em funcao de lambda
+  #Analise da quantidade de parcelas com decisao
   nParcDec <- c() #Numero de parcelas com decisao, por cultura
   for(i in 1:c)
-    nParcDec[i] <- nrow(SVM.sub$result[SVM.sub$result$verdade == i & SVM.sub$result$prob1 >= qi[i],])
+    nParcDec[i] <- nrow(classificador$result[classificador$result$class1 == i & classificador$result$prob1 >= qi[i],])
   
-  nParcTot <- table(SVM.sub$result$verdade)
-  percParcDec <- nParcDec/nParcTot    #Percentagem de parcelas com decisao, por cultura
-  percTotDec <- sum(nParcDec)/length(SVM.sub$result$verdade)  #Percentagem de parcelas com decisao, total
+  nParcTot <- table(classificador$result$class1)
+  #percParcDec <- nParcDec/nParcTot    #Percentagem de parcelas com decisao, por cultura
+  #percTotDec <- sum(nParcDec)/length(classificador$result$class1)  #Percentagem de parcelas com decisao, total
   
   #Output dos resultados
   return(list(qi=qi,
               todasConfiancas=todasConfiancas,
               nParcDec=nParcDec,
-              percParcDec=percParcDec,
-              percTotDec=percTotDec))
+              nParcTot=nParcTot))
+              #percParcDec=percParcDec,
+              #percTotDec=percTotDec))
 }
 
 
@@ -877,9 +867,6 @@ fixaLimiteQ <- function(classificador, lambda)
 #           - k:           KNN: numero de classes
 #           - gamma:       SVM: parametro gamma
 #           - cost:        SVM: parametro de custo
-#           - kRange:      KNN: gama de k para o tune, se for desejado
-#           - gammaRange:  SVM: gama de gamma para o tune, se for desejado
-#           - costRange:   SVM: gama de cost para o tune, se for desejado
 #   output: lista com resultados da validacao cruzada efectuada, contendo 2 elementos:
 #           - lista resultTodos (resultados em cada uma das n validacoes 'folds')
 #           - lista result (media dos resultados mais importantes de resultTodos):
@@ -891,10 +878,11 @@ fixaLimiteQ <- function(classificador, lambda)
 #               - cost:         para classificador SMV
 #               - qi:           limites de probabilidade P(wi|x) que garantem lambda para classe i
 #               - nParcDec:     numero de parcelas em que e' tomada uma decisao em cada classe
+#               - nParcTot:     numero de parcelas em cada classe
 #               - percParcDec:  percentagem de parcelas em que e' tomada uma decisao em cada classe
 #               - percTotDec:   percentagem global de parcelas em que e' tomada uma decisao
 #               - percsDecs:    percentagem global de parcelas em que e' tomada uma decisao para varios lambda's
-validacaoCruzada <- function(n, tipo, dados, lambda, tune=FALSE, k=NA, gamma=NA, cost=NA, kRange=NA, gammaRange=NA, costRange=NA)
+validacaoCruzada <- function(n, tipo, dados, lambda, k=NA, gamma=NA, cost=NA)
 {
   #Estas sao as particoes que FICAM DE FORA em cada uma das validacoes
   resultTodos <- result <- list()
@@ -911,20 +899,25 @@ validacaoCruzada <- function(n, tipo, dados, lambda, tune=FALSE, k=NA, gamma=NA,
     dadosValid <- dados[particoes[[i]],]
     
     #Treina e valida o classificador e fixa os limites qi
-    classificador <- treinaValida(tipo, dadosTrein, dadosValid, tune=FALSE, k=k, gamma=gamma, cost=cost, kRange=kRange, gammaRange=gammaRange, costRange=costRange)
+    classificador <- treinaValida(tipo, dadosTrein, dadosValid, k=k, gamma=gamma, cost=cost)
     qiLimite <- fixaLimiteQ(classificador, lambda)
     
     #Percentagem de parcelas em que se toma uma decisao em funcao da gama de lambdas (0.5:1.0)
     lambdas <- seq(0.5,1,by=0.05)
     percsDecs <- c()
     for(j in 1:length(lambdas))
-      percsDecs[j] <- fixaLimiteQ(classificador = classificador, lambda = lambdas[j])$percTotDec
-
+    {
+      res <- fixaLimiteQ(classificador = classificador, lambda = lambdas[j])
+      nParcDec <- res$nParcDec
+      nParcTot <- res$nParcTot
+      percsDecs[j] <- sum(nParcDec)/sum(nParcTot)
+    }
+    
     #Resultados desta validacao
     resultTodos[[paste0('valid',i)]] <- c(classificador, qiLimite, percsDecs=list(percsDecs))
   }
   
-  #Contrucao dos resultados
+  #Construcao dos resultados
   nomes <- names(resultTodos$valid1$qi)
   tmp <- unlist(resultTodos, F)
   result[["correcTot"]] <- as.vector(sapply("correcTot", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
@@ -932,16 +925,16 @@ validacaoCruzada <- function(n, tipo, dados, lambda, tune=FALSE, k=NA, gamma=NA,
   names(result[["userA"]]) <- nomes
   result[["prodA"]] <- as.vector(sapply("prodA", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["prodA"]]) <- nomes
-  result[["k"]] <- as.vector(sapply("k", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  result[["gamma"]] <- as.vector(sapply("gamma", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  result[["cost"]] <- as.vector(sapply("cost", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   result[["qi"]] <- as.vector(sapply("qi", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["qi"]]) <- nomes
-  result[["nParcDec"]] <- as.vector(sapply("nParcDec", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["nParcDec"]] <- as.vector(sapply("nParcDec", function(x) rowSums(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["nParcDec"]]) <- nomes
-  result[["percParcDec"]] <- as.vector(sapply("percParcDec", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  names(result[["percParcDec"]]) <- nomes
-  result[["percTotDec"]] <- as.vector(sapply("percTotDec", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["nParcTot"]] <- as.vector(sapply("nParcTot", function(x) rowSums(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  names(result[["nParcTot"]]) <- nomes
+  
+  result[["percParcDec"]] <- result[["nParcDec"]]/result[["nParcTot"]]
+  result[["percTotDec"]] <- sum(result[["nParcDec"]])/sum(result[["nParcTot"]])
+
   result[["percsDecs"]] <- as.vector(sapply("percsDecs", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["percsDecs"]]) <- lambdas
   
