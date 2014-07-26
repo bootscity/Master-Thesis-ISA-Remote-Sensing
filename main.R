@@ -35,6 +35,7 @@ init()
 #Definir area de estudo, carregar dados, recortar e projectar
 coordsArea <- cbind(AREA.X,AREA.Y)
 cdg <- carregaRecortaDadosEspaciais(coordsArea, PROJ4.UTM)
+plot(cdg$area);plot(cdg$parc2005, add=T)
 
 #Obter e corrigir todas as imagens
 rm(todasImagens)
@@ -299,14 +300,6 @@ points3d(x=dadosTreino$B3_d3[dadosTreino$cultura == 13],
 dadosClassificadores <- listaTodasParcelas[,c(5,7:12,15:20,23:28,31:36,39:44,47:52)]
 dadosClassificadores$cultura <- as.factor(dadosClassificadores$cultura)
 
-#Amostra a usar para o modelo - metade para treino e metade para validacao
-set.seed(0)
-amostra <- sample(1:nrow(dadosClassificadores), ceiling(nrow(dadosClassificadores)/2))
-
-#Seleccao dos dados
-#dadosTreino <- dadosClassificadores[amostra,]
-#dadosValidacao <- dadosClassificadores[-amostra,]
-
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 4.2 Sub-conjunto do conjunto completo ----
@@ -400,34 +393,29 @@ gamma.sub <- SVM.tune.sub[1][[1]][1,1];gamma.sub
 cost.sub <- SVM.tune.sub[1][[1]][1,2];cost.sub
 
 #Validacao cruzada
-SVM.sub.cruz <- validacaoCruzada(n = 2, tipo = 'SVM', dados = dadosClassificadoresSub, lambda = 0.8, gamma = gamma.sub, cost = cost.sub)
+SVM.sub.cruz <- validacaoCruzada(n = 10, tipo = 'SVM', dados = dadosClassificadoresSub, lambda = 0.8, gamma = gamma.sub, cost = cost.sub)
 
 
 
-
-
-
-#Teste
-probsTodas <- rbind(SVM.sub.cruz$resultTodos$valid1$result, SVM.sub.cruz$resultTodos$valid2$result, SVM.sub.cruz$resultTodos$valid3$result, SVM.sub.cruz$resultTodos$valid4$result, SVM.sub.cruz$resultTodos$valid5$result, SVM.sub.cruz$resultTodos$valid6$result, SVM.sub.cruz$resultTodos$valid7$result, SVM.sub.cruz$resultTodos$valid8$result, SVM.sub.cruz$resultTodos$valid9$result, SVM.sub.cruz$resultTodos$valid10$result)
-
-
-j <- sort(probsTodas[probsTodas$class1 == 4,4])
-q4 <- SVM.sub.cruz$result$qi[4]
-
-length(j[j >= q4])/length(j)
-SVM.sub.cruz$result$percParcDec[4]
-
-
-SVM.sub.cruz$resultTodos$valid1$percParcDec[4]
-SVM.sub.cruz$resultTodos$valid2$percParcDec[4]
-SVM.sub.cruz$resultTodos$valid3$percParcDec[4]
-SVM.sub.cruz$resultTodos$valid4$percParcDec[4]
-SVM.sub.cruz$resultTodos$valid5$percParcDec[4]
-SVM.sub.cruz$resultTodos$valid6$percParcDec[4]
-SVM.sub.cruz$resultTodos$valid7$percParcDec[4]
-SVM.sub.cruz$resultTodos$valid8$percParcDec[4]
-SVM.sub.cruz$resultTodos$valid9$percParcDec[4]
-SVM.sub.cruz$resultTodos$valid10$percParcDec[4]
+#VERIFICACOES
+# as.vector(SVM.sub.cruz$result$percsDecs[,'0.8'])
+# as.vector(c(SVM.sub.cruz$result$percTotDec, SVM.sub.cruz$result$percParcDec))
+# 
+# SVM.sub.cruz$resultTodos$valid1$nParcDec[4]/SVM.sub.cruz$resultTodos$valid1$nParcTot[4]
+# SVM.sub.cruz$resultTodos$valid2$nParcDec[4]/SVM.sub.cruz$resultTodos$valid2$nParcTot[4]
+# SVM.sub.cruz$resultTodos$valid3$nParcDec[4]/SVM.sub.cruz$resultTodos$valid3$nParcTot[4]
+# SVM.sub.cruz$resultTodos$valid4$nParcDec[4]/SVM.sub.cruz$resultTodos$valid4$nParcTot[4]
+# SVM.sub.cruz$resultTodos$valid5$nParcDec[4]/SVM.sub.cruz$resultTodos$valid5$nParcTot[4]
+# SVM.sub.cruz$resultTodos$valid6$nParcDec[4]/SVM.sub.cruz$resultTodos$valid6$nParcTot[4]
+# SVM.sub.cruz$resultTodos$valid7$nParcDec[4]/SVM.sub.cruz$resultTodos$valid7$nParcTot[4]
+# SVM.sub.cruz$resultTodos$valid8$nParcDec[4]/SVM.sub.cruz$resultTodos$valid8$nParcTot[4]
+# SVM.sub.cruz$resultTodos$valid9$nParcDec[4]/SVM.sub.cruz$resultTodos$valid9$nParcTot[4]
+# SVM.sub.cruz$resultTodos$valid10$nParcDec[4]/SVM.sub.cruz$resultTodos$valid10$nParcTot[4]
+# 
+# SVM.sub.cruz$resultTodos$valid7$qi[4]
+# SVM.sub.cruz$resultTodos$valid7$todasConfiancas
+# 
+# (SVM.sub.cruz$resultTodos$valid1$nParcDec/SVM.sub.cruz$resultTodos$valid1$nParcTot)==as.vector(SVM.sub.cruz$resultTodos$valid1$percsDecs[,'0.8'])[-1]
 
 
 

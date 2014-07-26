@@ -60,26 +60,75 @@ dev.off()
 
 
 
-tikz('../05 Escrito/TEX/test.tex',width=4,height=4)
-par(las=1, mar=c(3.2,3.2,1,1), mgp=c(2,0.5,0), tck = 0.012)
-lambdas <- seq(0.5,1,by=0.05)
-plot(lambdas*100,
-     SVM.comp.cruz$result$percsDecs*100,
-     xaxt='n',
-     yaxt='n',
-     xlab='Confianca',
-     ylab='Percentagem de parcelas com decisao',
-     ylim=c(0,100),
-     col=g[1],
-     bg=g[1],
-     pch=21,
-     type='o')
-axis(1, at=lambdas*100, labels=lambdas*100)
-axis(2, at=seq(0,100,10), labels=seq(0,100,10))
+tikz('../05 Escrito/TEX/signatures.tex',width=6,height=8)
 
-points(lambdas*100, SVM.sub.cruz$result$percsDecs*100, col=g[2], bg=g[2], pch=22, type='o')
-points(lambdas*100, KNN.comp.cruz$result$percsDecs*100, col=g[3], bg=g[3], pch=23, type='o')
-points(lambdas*100, KNN.sub.cruz$result$percsDecs*100, col=g[4], bg=g[4], pch=24, type='o')
+dados <- data.table(dadosClassificadoresSub)
+assinaturasSub <- dados[,list(B1_d2=mean(B1_d2),
+                              B1_d5=mean(B1_d5),
+                              B1_d6=mean(B1_d6),
+                              B3_d1=mean(B3_d1),
+                              B4_d1=mean(B4_d1),
+                              B4_d3=mean(B4_d3),
+                              B4_d4=mean(B4_d4),
+                              B4_d5=mean(B4_d5),
+                              B4_d6=mean(B4_d6),
+                              B5_d4=mean(B5_d4),
+                              B5_d6=mean(B5_d6),
+                              B6_d3=mean(B6_d3),
+                              B1_d2sd=sd(B1_d2),
+                              B1_d5sd=sd(B1_d5),
+                              B1_d6sd=sd(B1_d6),
+                              B3_d1sd=sd(B3_d1),
+                              B4_d1sd=sd(B4_d1),
+                              B4_d3sd=sd(B4_d3),
+                              B4_d4sd=sd(B4_d4),
+                              B4_d5sd=sd(B4_d5),
+                              B4_d6sd=sd(B4_d6),
+                              B5_d4sd=sd(B5_d4),
+                              B5_d6sd=sd(B5_d6),
+                              B6_d3sd=sd(B6_d3)),by=cultura]
+assinaturasSub <- as.data.frame(assinaturasSub)
+assinaturasSub <- assinaturasSub[order(assinaturasSub$cultura, decreasing = F),]
+
+d <- c('14 Fev', '2 Mar', '5 Mai', '6 Jun', '8 Jul', '25 Ago')
+
+par(mfrow=c(6,2), las=2, mar=c(1.2,1.2,0,0), oma=c(3,1.5,0.3,0.3), mgp=c(2,0.5,0), tck = 0.04)
+#Todos
+for(i in 1:nrow(assinaturasSub))
+{
+  plot(1:12, assinaturasSub[i,2:13], type='l', pch=20, ylim=c(0,0.4), axes=F, xlab='', ylab='')
+  box()
+  
+  if(i == 11 | i == 12)
+    axis(1, at=1:12, labels=c(d[2], d[5], d[6], d[1], d[1], d[3], d[4], d[5], d[6], d[4], d[6], d[3]))
+  else
+    axis(1, at=1:12, labels=rep('',12))
+  
+  if(i %% 2 == 1)
+    axis(2, at=seq(0, 0.4, 0.1), labels=seq(0, 0.4, 0.1))
+  else
+    axis(2, at=seq(0, 0.4, 0.1), labels=rep('',5))
+  
+  axis(3, at=1:12, labels=rep('',12))
+  axis(4, at=seq(0, 0.4, 0.1), labels=rep('',5))
+  
+  abline(v=c(3.5,4.5, 9.5, 11.5), lty=3)
+  arrows(x0 = 1:12, x1 = 1:12, y0 = as.numeric(assinaturasSub[i,2:13]), y1 = as.numeric(assinaturasSub[i,2:13]+assinaturasSub[i,14:25]), length = 0.04, angle = 90)
+  arrows(x0 = 1:12, x1 = 1:12, y0 = as.numeric(assinaturasSub[i,2:13]), y1 = as.numeric(assinaturasSub[i,2:13]-assinaturasSub[i,14:25]), length = 0.04, angle = 90)
+  
+  text(0.6, 0.34, codigosNovos2005$NOVO_NOME[i], pos = 4)
+  
+  if(i == 11 | i == 12)
+  {
+    text(1.45, 0.03, 'B1', pos = 4)
+    text(3.45, 0.03, 'B3', pos = 4)
+    text(6.45, 0.03, 'B4', pos = 4)
+    text(9.95, 0.03, 'B5', pos = 4)
+    text(11.45, 0.03, 'B7', pos = 4)
+  }
+}
+
+
 dev.off()
 
 

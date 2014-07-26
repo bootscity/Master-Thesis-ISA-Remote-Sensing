@@ -54,8 +54,6 @@ init  <-  function()
   #Definicao de codigos de culturas
   codigos2005 <<- read.delim("culturas2005.txt",header=T)
   codigosNovos2005 <<- read.delim("culturasNovas2005.txt",header=T)
-  #codNomesAbrev <- c('Past. perm.', 'Sup. forrageira','Arroz','Milho','Trigo','Pousio','Cevada','Vinha','Aveia','Lolium','Sup. nao usada', 'Past. pobre','Betteraba sac.','Olival','Sorgo','Girassol','Horticolas')
-  #codigosNovos2005 <<- cbind(codigosNovos2005,codNomesAbrev)
   
   #Definicao de constantes
   source('constants.R')
@@ -70,31 +68,22 @@ init  <-  function()
 carregaRecortaDadosEspaciais <- function(coordsAreaEstudo, crs)
 {
   #Ler os dados dos ficheiros shp
-  #p2003 <- readShapePoly(paste0(CAMINHO.SHP,"/2003/2003_PARC"), proj4string=PROJ4.IGEOE)
-  #p2004 <- readShapePoly(paste0(CAMINHO.SHP,"/2004/2004_PARC"), proj4string=PROJ4.IGEOE)
   p2005 <- readShapePoly(paste0(CAMINHO.SHP,"/2005/2005_PARC"), proj4string=PROJ4.IGEOE)
-  #c <- readShapePoly(paste0(CAMINHO.SHP,"/Enquadramentos PT IGEO/CONCELHOS"), proj4string=PROJ4.ETRS)
+  c <- readShapePoly(paste0(CAMINHO.SHP,"/Enquadramentos PT IGEO/CONCELHOS"), proj4string=PROJ4.ETRS)
   
   #Transformar cdg's para sistema de coordenadas dado no argumento crs
-  #p2003Trans <- spTransform(p2003, crs)
-  #p2004Trans <- spTransform(p2004, crs)
   p2005Trans <- spTransform(p2005, crs)
-  #cTrans <- spTransform(c, crs)
+  cTrans <- spTransform(c, crs)
   
   #Construir area de estudo a partir da matriz de entrada
   areaEstudo <- SpatialPolygons(list(Polygons(list(Polygon(coordsAreaEstudo)), "1")),proj4string=crs)
   
-  #Recortar as parcelas pela area de estudo
-  #p2003inter <- gIntersects(p2003Trans, areaEstudo, byid=TRUE)
-  #p2003clip <- subset(p2003Trans,as.vector(p2003inter))
-  #p2003clip@data$ID <- 1:length(p2003clip@data$ID)  
-  
-  p2005inter <- gIntersects(p2005Trans, areaEstudo, byid=TRUE)
+  #Recortar as parcelas pela area de estudo  
+  p2005inter <- gWithin(p2005Trans, areaEstudo, byid=TRUE)
   p2005clip <- subset(p2005Trans,as.vector(p2005inter))
   p2005clip@data$ID <- 1:length(p2005clip@data$ID)  
   
-  #out <- list(parc2003=p2003clip, parc2004=p2004clip, parc2005=p2005clip, area=areaEstudo, conc=c)
-  out <- list(parc2005=p2005clip, area=areaEstudo)
+  out <- list(parc2005=p2005clip, area=areaEstudo, concelhos=cTrans)
   return(out)
 }
 
@@ -234,61 +223,54 @@ corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo=FALSE, pref
 
 
 #5. Funcao constroiListaImagensLandsat:
-#   input:  - landsatPath: caminho para a directoria que contem todas as datas de Landsat
+#   input:  - landsatPath: caminho para a directoria que contem todas as datas de Landsat: nesta directoria, as 
+#                         pastas para cada imagem TEM que estar ordenadas cronoligicamente
 #           - areaEstudo:  cdg com poligono pelo qual as imagens serao cortadas
 #           - prefixo:     string que e juntada ao nome original da imagem, na imagem corrigida
-#           - anos:        vector com os anos para os quais se pretende obter a lista de imagens
+#           - ano:        ano para o qual se pretende obter a lista de imagens
 #           - corrige: FALSE se nao for para corrigir as imagens, mas sim ler imagens ja corrigidas
 #   output: - lista com todas as datas e imagens Landsat em forma de matriz, incluindo detalhes da imagem
-constroiListaImagensLandsat <- function(landsatPath, areaEstudo, prefixo, anos=ANOS, corrige=FALSE)
+constroiListaImagensLandsat <- function(landsatPath, areaEstudo, prefixo, ano=ANO, corrige=FALSE)
 {
   conjuntos <- list.files(landsatPath, full.names = FALSE)
-  todosAnos <- 0; doys <- 0
+  doys <- 0
   out <- list()
   
   #Leitura dos dados a partir dos nomes das directorias
   for(i in 1:length(conjuntos))
-  {
-    todosAnos[i] <- as.numeric(substr(conjuntos[i], 10, 13))
     doys[i] <- as.numeric(substr(conjuntos[i], 14, 16))
-  }
   
-  for(i in 1:length(anos))
+  strAno <- paste0("a", ano)
+  out[[strAno]] <- list()
+  
+  #DATAS E IMAGENS
+  for(j in 1:length(doys))
   {
-    #ANO
-    ano <- anos[i]
-    strAno <- paste0("a", ano)
-    out[[strAno]] <- list()
+    #if(ano != todosAnos[j]) next
+    doy <- doys[j]
+    strDoy <- paste0("d", doy)
+    out[[strAno]][[strDoy]][["DR"]] <- corrigeLeConjuntoImagensLandsat(paste0(landsatPath,"/",conjuntos[j]), areaEstudo, prefixo, corrige)
     
-    #DATAS E IMAGENS
-    for(j in 1:length(doys))
-    {
-      if(ano != todosAnos[j]) next
-      doy <- doys[j]
-      strDoy <- paste0("d", doy)
-      out[[strAno]][[strDoy]][["DR"]] <- corrigeLeConjuntoImagensLandsat(paste0(landsatPath,"/",conjuntos[j]), areaEstudo, prefixo, corrige)
-      
-      #Obter dados de coordenadas min e max
-      img <- out[[strAno]][[strDoy]][["DR"]][["b1"]]
-      xmin <- xmin(img)
-      ymax <- ymax(img)
-      cellsize <- res(img)[1]
-      TAMANHO.CELULA <<- cellsize
-      out[[strAno]][[strDoy]][["info"]] <- list("xmin"=xmin, "ymax"=ymax,"ymax2"=ymax, "cellsize"=cellsize)
-      
-      #obter coordenadas de todos os pontos
-      coordRas <- coordinates(img)
-      lin <- nrow(img)
-      col <- ncol(img)
-      xCoord <- matrix(coordRas[,1],nrow=lin,ncol=col,byrow=T)
-      yCoord <- matrix(coordRas[,2],nrow=lin,ncol=col,byrow=T)
-      out[[strAno]][[strDoy]][["X"]] <- xCoord
-      out[[strAno]][[strDoy]][["Y"]] <- yCoord
-      
-      #Finalmente, converter as imagens a matrizes para mais tarde facilitar o processamento
-      for (k in 1:length(out[[strAno]][[strDoy]][["DR"]]))
-        out[[strAno]][[strDoy]][["DR"]][[k]] <- as.matrix(out[[strAno]][[strDoy]][["DR"]][[k]])
-    }
+    #Obter dados de coordenadas min e max
+    img <- out[[strAno]][[strDoy]][["DR"]][["b1"]]
+    xmin <- xmin(img)
+    ymax <- ymax(img)
+    cellsize <- res(img)[1]
+    TAMANHO.CELULA <<- cellsize
+    out[[strAno]][[strDoy]][["info"]] <- list("xmin"=xmin, "ymax"=ymax,"ymax2"=ymax, "cellsize"=cellsize)
+    
+    #obter coordenadas de todos os pontos
+    coordRas <- coordinates(img)
+    lin <- nrow(img)
+    col <- ncol(img)
+    xCoord <- matrix(coordRas[,1],nrow=lin,ncol=col,byrow=T)
+    yCoord <- matrix(coordRas[,2],nrow=lin,ncol=col,byrow=T)
+    out[[strAno]][[strDoy]][["X"]] <- xCoord
+    out[[strAno]][[strDoy]][["Y"]] <- yCoord
+    
+    #Finalmente, converter as imagens a matrizes para mais tarde facilitar o processamento
+    for (k in 1:length(out[[strAno]][[strDoy]][["DR"]]))
+      out[[strAno]][[strDoy]][["DR"]][[k]] <- as.matrix(out[[strAno]][[strDoy]][["DR"]][[k]])
   }
   
   return(out)
@@ -296,12 +278,12 @@ constroiListaImagensLandsat <- function(landsatPath, areaEstudo, prefixo, anos=A
 
 
 #6. Funcao constroiListaDados:
-#   input:  - anos: anos que devem ser incluidos na lista de dados
+#   input:  - ano: ano em analise
 #   output: - lista com toda a informacao disponivel sobre parcelas e dados de reflectancias, tendo esta forma:
 #               lista$nNIFAP$aANO$pPARCELA$DR$dDATA$bBANDA
 #                                         $atributos
 #                                         $coordsPoly
-constroiListaDados <- function(anos=ANOS)
+constroiListaDados <- function(ano=ANO)
 {
   todosNIFAP <- c(cdg$parc2005@data$NIFAP)#, cdg$parc2004@data$NIFAP, cdg$parc2005@data$NIFAP)
   unicosNIFAP <- sort(unique(todosNIFAP))
@@ -318,10 +300,10 @@ constroiListaDados <- function(anos=ANOS)
     listaGlobal[[strNIFAP]] <- list()
     
     #for(j in 1:1)
-    for(j in 1:length(anos))
+    for(j in 1:length(ano))
     {
       #ANO
-      ano <- anos[j]
+      ano <- ano[j]
       strAno <- paste0("a", ano)
       listaGlobal[[strNIFAP]][[strAno]] <- list()
       
@@ -543,7 +525,6 @@ parcNIFAP<-function(nomeParc)
 #   output: - data.frame com dados organizados para se efectuar uma ANOVA hierarquizada
 constroiDadosANOVA <- function(ano, data, banda, dimAmostra)
 {
-  #ano <- which(ANOS==ano)    Isto so vai funcionar quando a listaDados tiver todos os anos
   numParcANOVA <<- 1
   dadosANOVA <- matrix(nrow=0,ncol=3)
   set.seed(0)    #Depois e para tirar
@@ -777,13 +758,6 @@ treinaValida <- function(tipo, treino, valid, k=NA, gamma=NA, cost=NA)
   prodA <- diag(as.matrix(matErro))/colSums(matErro)
   names(userA) <- names(prodA) <- names(matErro)
   
-  #Matriz de erro e percentagem de classificacoes correctas POR GRUPO de probabilidade
-#   matErroProb <- as.array(table(class = factor(class1, levels=levels(valid[,1])), verdade = valid[,1], prob=round(probs1, 1)))
-#   correcProb <- c()
-#   for (i in 1:length(matErroProb[1,1,]))
-#     correcProb[i] <- cc(matErroProb[,,i])
-#   names(correcProb) <- names(table(round(probs1, 1)))
-  
   #Construcao do output
   out<-list(#classificador=classificador,
             result=result,
@@ -811,13 +785,6 @@ fixaLimiteQ <- function(classificador, lambda)
     #Ir aumentanto o valor do limite q
     for(q in seq(0, 1, by = 0.001))
     {
-      #ORIGINAL
-#       Rq <- classificador$result[classificador$result$prob1 >= q,]
-#       matriz <- as.data.frame.matrix(squareTable(x = Rq$class1, y = Rq$verdade))  #para garantir que e quadrada
-#       confiancas <- diag(as.matrix(matriz))/rowSums(matriz)
-#       confianca.i <- confiancas[i];confianca.i
-      
-      #NOVO
       Rq <- classificador$result[classificador$result$prob1 >= q & classificador$result$class1 == i,]
       confianca.i <- nrow(Rq[Rq$verdade == Rq$class1,])/nrow(Rq)
       
@@ -830,31 +797,28 @@ fixaLimiteQ <- function(classificador, lambda)
       #Sair quando a confianca nao consegue atingir lambda pretendido
       if(is.na(confianca.i)) {qi[i] <- 1; break}
       
-      #Sair quando q e suficientemente grande para garantir lambda
-      #if(confianca.i >= lambda) {qi[i] <- q; break}
-      
       #Sair quando houver alteracao E quando q e suficientemente grande para garantir lambda
-      if(confianca.i >= lambda & confianca.i != confianca.anterior) {qi[i] <- q; break}
-      confianca.anterior <- confianca.i
+      #if(confianca.i >= lambda & confianca.i != confianca.anterior) {qi[i] <- q; break}
+      #confianca.anterior <- confianca.i
+      
+      #Sair quando q e suficientemente grande para garantir lambda
+      if(confianca.i >= lambda & q >= min(Rq$prob1)) {qi[i] <- q; break}
+      
     }
   names(qi) <- names(classificador$matErro)
   
-  #Analise da quantidade de parcelas com decisao
-  nParcDec <- c() #Numero de parcelas com decisao, por cultura
+  #Analise da percentagem de parcelas com decisao i, DENTRO das que foram classificadas como i
+  nParcDec <- c()
   for(i in 1:c)
     nParcDec[i] <- nrow(classificador$result[classificador$result$class1 == i & classificador$result$prob1 >= qi[i],])
   
   nParcTot <- table(classificador$result$class1)
-  #percParcDec <- nParcDec/nParcTot    #Percentagem de parcelas com decisao, por cultura
-  #percTotDec <- sum(nParcDec)/length(classificador$result$class1)  #Percentagem de parcelas com decisao, total
   
   #Output dos resultados
   return(list(qi=qi,
               todasConfiancas=todasConfiancas,
               nParcDec=nParcDec,
               nParcTot=nParcTot))
-              #percParcDec=percParcDec,
-              #percTotDec=percTotDec))
 }
 
 
@@ -881,7 +845,7 @@ fixaLimiteQ <- function(classificador, lambda)
 #               - nParcTot:     numero de parcelas em cada classe
 #               - percParcDec:  percentagem de parcelas em que e' tomada uma decisao em cada classe
 #               - percTotDec:   percentagem global de parcelas em que e' tomada uma decisao
-#               - percsDecs:    percentagem global de parcelas em que e' tomada uma decisao para varios lambda's
+#               - percsDecs:    percentagem de parcelas em que e' tomada uma decisao para varios lambda's
 validacaoCruzada <- function(n, tipo, dados, lambda, k=NA, gamma=NA, cost=NA)
 {
   #Estas sao as particoes que FICAM DE FORA em cada uma das validacoes
@@ -902,16 +866,20 @@ validacaoCruzada <- function(n, tipo, dados, lambda, k=NA, gamma=NA, cost=NA)
     classificador <- treinaValida(tipo, dadosTrein, dadosValid, k=k, gamma=gamma, cost=cost)
     qiLimite <- fixaLimiteQ(classificador, lambda)
     
-    #Percentagem de parcelas em que se toma uma decisao em funcao da gama de lambdas (0.5:1.0)
-    lambdas <- seq(0.5,1,by=0.05)
-    percsDecs <- c()
+    #Percentagem de parcelas em que se toma uma decisao em funcao da gama de lambdas: total e por classe
+    lambdas <- seq(0.5, 1, by = 0.05)
+    percsDecs <- matrix(ncol = length(lambdas), nrow = length(qiLimite$qi)+1)
     for(j in 1:length(lambdas))
     {
       res <- fixaLimiteQ(classificador = classificador, lambda = lambdas[j])
       nParcDec <- res$nParcDec
       nParcTot <- res$nParcTot
-      percsDecs[j] <- sum(nParcDec)/sum(nParcTot)
+      cult <- as.vector(nParcDec/nParcTot)
+      tot <- sum(nParcDec)/sum(nParcTot)
+      percsDecs[,j] <- c(tot,cult)
     }
+    colnames(percsDecs) <- lambdas
+    rownames(percsDecs) <- c('total', as.character(codigosNovos2005$NOVO_NOME[1:12]))
     
     #Resultados desta validacao
     resultTodos[[paste0('valid',i)]] <- c(classificador, qiLimite, percsDecs=list(percsDecs))
@@ -927,32 +895,27 @@ validacaoCruzada <- function(n, tipo, dados, lambda, k=NA, gamma=NA, cost=NA)
   names(result[["prodA"]]) <- nomes
   result[["qi"]] <- as.vector(sapply("qi", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
   names(result[["qi"]]) <- nomes
-  result[["nParcDec"]] <- as.vector(sapply("nParcDec", function(x) rowSums(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  names(result[["nParcDec"]]) <- nomes
-  result[["nParcTot"]] <- as.vector(sapply("nParcTot", function(x) rowSums(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  names(result[["nParcTot"]]) <- nomes
+  #result[["nParcDec"]] <- as.vector(sapply("nParcDec", function(x) rowSums(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  #names(result[["nParcDec"]]) <- nomes
+  #result[["nParcTot"]] <- as.vector(sapply("nParcTot", function(x) rowSums(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  #names(result[["nParcTot"]]) <- nomes
   
-  result[["percParcDec"]] <- result[["nParcDec"]]/result[["nParcTot"]]
-  result[["percTotDec"]] <- sum(result[["nParcDec"]])/sum(result[["nParcTot"]])
-
-  result[["percsDecs"]] <- as.vector(sapply("percsDecs", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  names(result[["percsDecs"]]) <- lambdas
+  #result[["percParcDec"]] <- result[["nParcDec"]]/result[["nParcTot"]]
+  #result[["percTotDec"]] <- sum(result[["nParcDec"]])/sum(result[["nParcTot"]])
+  
+  #Fazer media das matrizes de percentagem de classificacoes em funcao de lambda
+  todasMatrizes <- c()
+  for(k in 1:length(resultTodos))
+    todasMatrizes <- c(todasMatrizes, resultTodos[[k]]$percsDecs)
+  arrayTodasMatrizes <- array(todasMatrizes, dim = c(nrow(percsDecs), ncol(percsDecs), length(resultTodos)))
+  result[["percsDecs"]] <- apply(arrayTodasMatrizes, 1:2, mean)
+  colnames(result[["percsDecs"]]) <- lambdas
+  rownames(result[["percsDecs"]]) <- c('total', as.character(codigosNovos2005$NOVO_NOME[1:12]))
   
   print("Fim")
   return(list(result=result, resultTodos=resultTodos))
 }
 
-
-#XX. Funcao classificaProcesso
-#   input:  - 
-#   output: - 
-classificaProcesso <- function(parcelas, qi, ......)
-{
-  #Toma uma decisao acerca de cada parcela -- como?
-  
-  #Confirma se verificam criterios das medidas de greening
-  
-}
 
 
 #Pequenas funcoes de ajuda

@@ -18,7 +18,7 @@ CAMINHO.LANDSAT <<- "../01 Dados/03 Imagens satelite/LANDSAT"
 PROJ4.IGEOE <<- CRS("+proj=tmerc +lat_0=39.66666666666666 +lon_0=-8.131906111111112 +k=1 +x_0=200000 +y_0=300000 +ellps=intl +units=m +nadgrids=ptLX_e89.gsb +wktext +no_defs")
 PROJ4.ETRS <<- CRS("+proj=tmerc +lat_0=39.66825833333333 +lon_0=-8.133108333333334 +k=1 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs")
 PROJ4.UTM <<- CRS("+proj=utm +zone=29 +ellps=WGS84 +datum=WGS84 +units=m")
-ANOS <<- c(2003,2004,2005)
+ANO <<- c(2005)
 
 PROJ4.IGEOE.LL <<- CRS("+proj=longlat +lat_0=39.66666666666666 +lon_0=-8.131906111111112 +k=1 +x_0=200000 +y_0=300000 +ellps=intl +units=m +nadgrids=ptLX_e89.gsb +wktext +no_defs")
 PROJ4.ETRS.LL <<- CRS("+proj=longlat +lat_0=39.66825833333333 +lon_0=-8.133108333333334 +k=1 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs")
@@ -32,14 +32,28 @@ TAMANHO.CELULA <<- 30
 #http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20090027884.pdf
 
 #Coordenadas da area de estudo
-AREA.X <- c( 490733,  568131,  573315,  490717,  490733)
-AREA.Y <- c(4365213, 4368546, 4286457, 4286706, 4365213)
+AREA.X <<- c( 511467,  568131,  573315,  490717,  511467)
+AREA.Y <<- c(4361007, 4368546, 4286457, 4286706, 4361007)
+
+#Nomes das culturas
+NOMES_CULT <<- c('Permanent grassland',
+                 'Forage crops',
+                 'Maize',
+                 'Rice',
+                 'Fallow',
+                 'Wheat',
+                 'Vineyard',
+                 'Poor grassland',
+                 'Non used area',
+                 'Barley',
+                 'Oat',
+                 'Olive tree')
+
+COD_CULT <<- c('PGL', 'FOR', 'MAI', 'RIC', 'FAL', 'WHE', 'VYA', 'POG', 'NUA', 'BAR', 'OAT', 'OLI')
 
 
-#Esta e a area da pequena faixa nao danificada
-#AREA.X <- c( 508262,  528870,  511269,  490710,  508262)
-#AREA.Y <- c(4365569, 4362462, 4288360, 4291713, 4365569)
-
-
+#Coordenadas da area de estudo - PRE DESCOBERTA DE NUVENS
+#AREA.X <- c( 490733,  568131,  573315,  490717,  490733)
+#AREA.Y <- c(4365213, 4368546, 4286457, 4286706, 4365213)
 
 
