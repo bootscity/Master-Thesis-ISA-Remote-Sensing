@@ -12,23 +12,21 @@
 
 #Carregar objectos grandes
 
+load("cdg2005_29.07.Robj")
 load("todasImagens2005_15.06.Robj")
 load('listaDados2005_15.06.Robj')
-load("listaTodasParcelas2005_15.06.Robj")
-load('listaTodasParcelasIniciais2005_15.06.Robj')
+load("listaTodasParcelas2005_29.07.Robj")
+load('listaTodasParcelasIniciais2005_29.07.Robj')
 
 #Gravar objectos grandes como ficheiros
 
-save(cdg, file='cdg2005_15.06.Robj')
-save(todasImagens, file="todasImagens2005_15.06.Robj")
-save(listaDados, file='listaDados2005_15.06.Robj')
-save(listaTodasParcelasIniciais, file="listaTodasParcelasIniciais2005_15.06.Robj")
-save(listaTodasParcelas, file="listaTodasParcelas2005_15.06.Robj")
+save(cdg, file='cdg2005_29.07.Robj')
+save(todasImagens, file="todasImagens2005_14.08.Robj")
+save(listaDados, file='listaDados2005_14.08.Robj')
+save(listaTodasParcelasIniciais, file="listaTodasParcelasIniciais2005_14.08.Robj")
+save(listaTodasParcelas, file="listaTodasParcelas2005_14.08.Robj")
 save(resultValidCruz, file="resultValidCruz_01.07.Robj")
-save(s, file="stackLE72040332005157EDC00longLat.Robj")
+save(s, file="sRasterStackMapa.Robj")
+save(sTrue, file="sTrueRasterStackMapa.Robj")
 
-#Eliminar grandes objectos depois de escritos
-rm(listaDados)
-rm(cdg)
-rm(todasImagens)
-rm(resultValidCruz)
+

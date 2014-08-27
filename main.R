@@ -41,17 +41,22 @@ plot(cdg$area);plot(cdg$parc2005, add=T)
 rm(todasImagens)
 todasImagens <- constroiListaImagensLandsat(landsatPath=CAMINHO.LANDSAT,
                                             areaEstudo=cdg$area,
-                                            prefixo="CORR_15.06",
-                                            anos=2005,
-                                            corrige=FALSE)
+                                            prefixo="CORR_14.08",
+                                            ano=2005,
+                                            corrige=TRUE)
 
 #Obter lista de todos os dados
 rm(listaDados)
-listaDados <- constroiListaDados(anos=2005)
+listaDados <- constroiListaDados(ano=2005)
 
 #Obter conteudo relevante para TODAS as parcelas, em forma de data.frame
 listaTodasParcelasIniciais <- constroiTodasParcelas()
 
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -85,13 +90,16 @@ cultInfl <- areasCulturas[areasCulturas$V2 < areaTotal*limite,]
 cultInfl <- cultInfl[!cultInfl$cultura == 27]
 fraccaoInfl <- sum(cultInfl$area)/areaTotal
 cultInfluentes <- cultInfl$cultura
+length(cultInfluentes)
 
+#Numero de culturas restantes
+nrow(areasCulturas)-13
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Seleccionar apenas aquelas que representam 95% da area e reclassificar
 listaTodasParcelas <- listaTodasParcelas[listaTodasParcelas$cultura %in% cultInfluentes,]
 
-novasClasses <- as.data.frame(cbind(cultInfluentes,c(1,2,3,4,5,6,7,8,5,9,10,11,12)))
+novasClasses <- as.data.frame(cbind(cultInfluentes, c(1,2,3,4,5,6,7,8,5,9,10,11,12)))
 colnames(novasClasses) <- c('cultura','novaClasse')
 nClasses <- length(table(novasClasses$novaClasse))
 
@@ -297,9 +305,9 @@ points3d(x=dadosTreino$B3_d3[dadosTreino$cultura == 13],
 # 4.1 Conjunto completo ----
 
 #Preparacao dos dados para os classificadores - Apenas assinaturas espectrais das primeiras 6 datas
-dadosClassificadores <- listaTodasParcelas[,c(5,7:12,15:20,23:28,31:36,39:44,47:52)]
+#dadosClassificadores <- listaTodasParcelas[,c(5,7:12,15:20,23:28,31:36,39:44,47:52)]
+dadosClassificadores <- listaTodasParcelas[,c(5,7:42)]
 dadosClassificadores$cultura <- as.factor(dadosClassificadores$cultura)
-
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 4.2 Sub-conjunto do conjunto completo ----
@@ -308,6 +316,8 @@ dadosClassificadores$cultura <- as.factor(dadosClassificadores$cultura)
 dadosTrim <- dadosClassificadores
 criterioExclusaoVars <- 0.02
 classTrim <- trim.matrix(cor(dadosTrim[,-1]), criterioExclusaoVars);classTrim
+
+classTrim$names.discarded == classTrimOLD$names.discarded
 
 varsRetirar <- classTrim$numbers.discarded+1  #+1 porque na data.frame original, a coluna 1 é a cultura
 varsSobram <- 1:length(dadosTrim)
@@ -325,6 +335,13 @@ dadosValidacaoSub <- dadosClassificadoresSub[-amostra,]
 #NDVI's sao melhores mas mesmo assim piores que reflectancias
 #dadosValidacaoSubAreas <- listaTodasParcelas$area[-amostra]
 
+x <- cor(dadosTrim[,-1])
+anneal(cor(dadosTrim[,-1]), kmin=6, kmax=12, crit="rm")
+rm.coef(cor(dadosTrim[,-1]), ind=varsSobram)
+
+pca <- prcomp(dadosTrim[,-1], cor = T)
+summary(pca)
+head(dadosTrim[,-1])
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 5. 6. 7. ESCOLHA/TREINO/VALIDACAO DOS CLASSIFICADORES                               ####
@@ -335,111 +352,190 @@ dadosValidacaoSub <- dadosClassificadoresSub[-amostra,]
 # 5.1 KNN - K vizinhos mais proximos ----
 
 #%%%%%%%%%%%%%%%%%%%%%%%%
-#Todos os dados ----
+#Dataset 1: Todos os dados ---- PRONTO!!!
 
 #Tuning
-KNN.tune.comp <- tune.knn(dadosClassificadores[,-1], dadosClassificadores[,1], k=c(1,20))
-k.comp <- KNN.tune[1][[1]][1,1];k.comp
+resTune.comp.knn <- matrix(nrow=21, ncol=0)
+for(i in 1:10)
+{
+  print(i)
+  KNN.tune.comp <- tune.knn(dadosClassificadores[,-1], dadosClassificadores[,1], k=1:20)
+  k <- KNN.tune.comp[1][[1]][1,1]
+  erros <- KNN.tune.comp$performances$error
+  resTune.comp.knn <- cbind(resTune.comp.knn, c(k, erros))
+}
+#REsultado: usar k=7, porque é o mais frequente e tem o erro mais baixo
+
 
 #Validacao cruzada
-KNN.comp.cruz <- validacaoCruzada(n = 10, tipo = 'KNN', dados = dadosClassificadores, lambda = 0.8, k = k.comp)
+KNN.comp.cruz <- validacaoCruzada(n = 10, tipo = 'KNN', dados = dadosClassificadores, lambda = 0.8, k = 7)
+
 
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%
-#Apenas sub-conjunto de dados ----
+#Dataset 2: Apenas sub-conjunto de dados ---- PRONTO!!!
 
 #Tuning
-KNN.tune.sub <- tune.knn(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], k=c(1,20))
-k.sub <- KNN.tune[1][[1]][1,1];k.sub
+resTune.sub.knn <- matrix(nrow=21, ncol=0)
+for(i in 1:10)
+{
+  print(i)
+  KNN.tune.sub <- tune.knn(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], k=1:20)
+  k <- KNN.tune.sub[1][[1]][1,1]
+  erros <- KNN.tune.sub$performances$error
+  resTune.sub.knn <- cbind(resTune.sub.knn, c(k, erros))
+}
+#REsultado: usar k=7, porque é o mais frequente e tem o erro mais baixo
 
 #Validacao cruzada
-KNN.sub.cruz <- validacaoCruzada(n = 10, tipo = 'KNN', dados = dadosClassificadoresSub, lambda = 0.8, k = k.sub)
+KNN.sub.cruz <- validacaoCruzada(n = 10, tipo = 'KNN', dados = dadosClassificadoresSub, lambda = 0.8, k = 7)
 
-
-
-
-#KNN.comp <- treinaValida(tipo = 'KNN', treino = dadosTreino, valid = dadosValidacao, k = 10)
-#qi.KNN.comp <- fixaLimiteQ(classificador = KNN.comp, lambda = 0.8)
-#KNN.sub  <- treinaValida(tipo = 'KNN', treino = dadosTreinoSub, valid = dadosValidacaoSub, k = 10)
+KNN.sub.cruz$result$correcTot
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 5.2 SVM - Maquinas de vectores de suporte ----
 
 #%%%%%%%%%%%%%%%%%%%%%%%%
-#Todos os dados ----
+#Dataset 1: Todos os dados ---- PRONTO!!!
 
-#Tuning: usa de o do sub-conjunto porque este nao faz...
+#Tuning
+rGamma <- c(0.4, 0.6, 0.8, 1, 1.2, 1.4)
+rCost <- c(0.5, 1, 1.5, 2, 2.5, 3)
+resTune.comp.v1 <- matrix(ncol = length(rCost), nrow = length(rGamma))
+
+for(i in 1:length(rGamma))
+  for(j in 1:length(rCost))
+  {
+    print(paste0("i = ", i, " and j = ", j))
+    res <- SVM.tune.comp <- tune.svm(dadosClassificadores[,-1], dadosClassificadores[,1], gamma = rGamma[i], cost = rCost[j])
+    
+    resTune.comp.v1[i,j] <- res$best.performance
+  }
+colnames(resTune.comp.v1) <- rCost
+rownames(resTune.comp.v1) <- rGamma
+min(resTune.comp.v1)
+
 
 #Validacao cruzada
-SVM.comp.cruz <- validacaoCruzada(n = 10, tipo = 'SVM', dados = dadosClassificadores, lambda = 0.8, gamma = gamma.sub, cost = cost.sub)
+SVM.comp.cruz <- validacaoCruzada(n = 10, tipo = 'SVM', dados = dadosClassificadores, lambda = 0.8, gamma = 0.4, cost = 1.5)
 
+SVM.comp.cruz$result$correcTot
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%
-#Apenas sub-conjunto de dados ----
+#Dataset 2: Apenas sub-conjunto de dados ---- PRONTO!!!
 
 #Tuning
-SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma=1:3)  #1
-SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma=c(0.2, 0.6, 1))  #0.6
-SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma=c(0.4, 0.6, 0.8)) #0.4
-SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma=c(0.3, 0.4, 0.5)) #0.5
-SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma=0.5, cost=1:3) #3
-SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma=0.5, cost=c(2.5, 3, 3.5)) #3
-SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma=0.5, cost=c(2.8, 3, 3.2)) #3.2
-SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma=c(0.5,0.6), cost=c(3.2, 3.5))
+rGamma <- c(0.4, 0.6, 0.8, 1, 1.2, 1.4)
+rCost <- c(0.5, 1, 1.5, 2, 2.5, 3)
+resTune.sub.v1 <- matrix(ncol = length(rCost), nrow = length(rGamma))
 
-gamma.sub <- SVM.tune.sub[1][[1]][1,1];gamma.sub
-cost.sub <- SVM.tune.sub[1][[1]][1,2];cost.sub
+for(i in 1:length(rGamma))
+  for(j in 1:length(rCost))
+  {
+    print(paste0("i = ", i, " and j = ", j))
+    res <- SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma = rGamma[i], cost = rCost[j])
+
+    resTune.sub.v1[i,j] <- res$best.performance
+  }
+colnames(resTune.sub.v1) <- rCost
+rownames(resTune.sub.v1) <- rGamma
+min(resTune.sub.v1)
+
+
 
 #Validacao cruzada
-SVM.sub.cruz <- validacaoCruzada(n = 10, tipo = 'SVM', dados = dadosClassificadoresSub, lambda = 0.8, gamma = gamma.sub, cost = cost.sub)
+SVM.sub.cruz <- validacaoCruzada(n = 10, tipo = 'SVM', dados = dadosClassificadoresSub, lambda = 0.8, gamma = 0.4, cost = 2.5)
 
+SVM.sub.cruz$result$correcTot
 
+#Old tuning version
+# SVM.tune.sub <- tune.svm(dadosClassificadoresSub[,-1], dadosClassificadoresSub[,1], gamma=c(0.5,0.6), cost=c(3.2, 3.5))
+# gamma.sub <- SVM.tune.sub[1][[1]][1,1];gamma.sub
+# cost.sub <- SVM.tune.sub[1][[1]][1,2];cost.sub
 
-#VERIFICACOES
-# as.vector(SVM.sub.cruz$result$percsDecs[,'0.8'])
-# as.vector(c(SVM.sub.cruz$result$percTotDec, SVM.sub.cruz$result$percParcDec))
-# 
-# SVM.sub.cruz$resultTodos$valid1$nParcDec[4]/SVM.sub.cruz$resultTodos$valid1$nParcTot[4]
-# SVM.sub.cruz$resultTodos$valid2$nParcDec[4]/SVM.sub.cruz$resultTodos$valid2$nParcTot[4]
-# SVM.sub.cruz$resultTodos$valid3$nParcDec[4]/SVM.sub.cruz$resultTodos$valid3$nParcTot[4]
-# SVM.sub.cruz$resultTodos$valid4$nParcDec[4]/SVM.sub.cruz$resultTodos$valid4$nParcTot[4]
-# SVM.sub.cruz$resultTodos$valid5$nParcDec[4]/SVM.sub.cruz$resultTodos$valid5$nParcTot[4]
-# SVM.sub.cruz$resultTodos$valid6$nParcDec[4]/SVM.sub.cruz$resultTodos$valid6$nParcTot[4]
-# SVM.sub.cruz$resultTodos$valid7$nParcDec[4]/SVM.sub.cruz$resultTodos$valid7$nParcTot[4]
-# SVM.sub.cruz$resultTodos$valid8$nParcDec[4]/SVM.sub.cruz$resultTodos$valid8$nParcTot[4]
-# SVM.sub.cruz$resultTodos$valid9$nParcDec[4]/SVM.sub.cruz$resultTodos$valid9$nParcTot[4]
-# SVM.sub.cruz$resultTodos$valid10$nParcDec[4]/SVM.sub.cruz$resultTodos$valid10$nParcTot[4]
-# 
-# SVM.sub.cruz$resultTodos$valid7$qi[4]
-# SVM.sub.cruz$resultTodos$valid7$todasConfiancas
-# 
-# (SVM.sub.cruz$resultTodos$valid1$nParcDec/SVM.sub.cruz$resultTodos$valid1$nParcTot)==as.vector(SVM.sub.cruz$resultTodos$valid1$percsDecs[,'0.8'])[-1]
-
-
-
-#resultValidCruz <- list(KNN.comp.cruz, KNN.sub.cruz, SVM.comp.cruz, SVM.sub.cruz)
-#SVM.comp <- treinaValida(tipo = 'SVM', treino = dadosTreino, valid = dadosValidacao, gamma = 0.1, cost = 3)
-#qi.SVM.comp <- fixaLimiteQ(classificador = SVM.comp, lambda = 0.8)
-#SVM.sub  <- treinaValida(tipo = 'SVM', treino = dadosTreinoSub, valid = dadosValidacaoSub, gamma = 0.2, cost = 2)
-#qi.SVM.sub <- fixaLimiteQ(classificador = SVM.sub, lambda = 0.8)
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Fazer a validacao ao contrario para ter a certeza que esta tudo bem
-set.seed(1)
-amostra <- sample(1:nrow(dadosClassificadores), ceiling(nrow(dadosClassificadores)/2))
-dadosTreinoSub <- dadosClassificadoresSub[amostra,]
-dadosValidacaoSub <- dadosClassificadoresSub[-amostra,]
 
-validValid <- treinaValida(tipo = 'SVM', treino = dadosValidacaoSub, valid = dadosTreinoSub, gamma = gamma.sub, cost = cost.sub)
-vv <- c()
-for (i in 1:12)
+#resultCV e o resultado da validacao cruzada efectuada
+obtemPercentagemAceites <- function(resultCV, lambda)
 {
-  Rq <- validValid$result[validValid$result$prob1 >= SVM.sub.cruz$result$qi[i],]
-  matriz <- as.data.frame.matrix(squareTable(x = Rq$class1, y = Rq$verdade))  #para garantir que e quadrada
-  confiancas <- diag(as.matrix(matriz))/rowSums(matriz);
-  vv[i] <- confiancas[i]
+  #Juncao das classificacoes em cada fold
+  class <- NA
+  for(i in 1:10)
+    class <- rbind(class, resultCV$resultTodos[[i]]$result)
+  class <- class[-1,]
+  
+  #Seleccao apenas das classificacoes aceites
+  qi <- resultCV$result$qi
+  classAceites <- class[class$prob1 >= qi[class$class1],]
+  
+  #Matriz de erro e accuracy ststistics
+  matErro <- as.data.frame.matrix(table(class = factor(classAceites$class1, levels=levels(classAceites$verdade)), verdade = classAceites$verdade))
+  correcTot <- cc(matErro);correcTot
+  userA <- diag(as.matrix(matErro))/rowSums(matErro);userA
+  prodA <- diag(as.matrix(matErro))/colSums(matErro);prodA
+  
+  #Percentagem de parcelas com classificacao aceites
+  percClass <- nrow(classAceites)/nrow(dadosClassificadores);percClass
+  
+  #QUESTAO: como medir a percentagem de parcelas com classificacao aceite?
+  #Isto e a versao com a verdade, que faz mais sentido
+  percClassCult <- table(factor(classAceites$class1, levels=levels(classAceites$verdade)))/table(dadosClassificadores$cultura);percClassCult
+  
+  #Isto e a versao com a classificacao
+  percClassCult <- table(factor(classAceites$class1, levels=levels(classAceites$verdade)))/table(class$class1);percClassCult
 }
-round(vv,3)
+
+#TODO:
+#Fazer funcao com isto
+#Resultado da validacao cruzada tem que ser os qi para todos os lambdas e nao a percentagem de parcelas aceites, isso faz a nova funçao.
+
+
+
+
+
+#Explicacao para resultados acima nao fazerem sentido nenhum -> o numero de parcelas que podem ser classificadas devia ser calculada DEPOIS da validaçao cruzada!
+SVM.sub.cruz$resultTodos$valid3$result[SVM.sub.cruz$resultTodos$valid3$result$class1 == 7,]
+SVM.sub.cruz$resultTodos$valid3$qi
+SVM.sub.cruz$resultTodos$valid3$percsDecs[7+1,]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class <- NA
+for(i in 1:10)
+  class <- rbind(class, SVM.sub.cruz$resultTodos[[i]]$result)
+class <- class[-1,]
+qi <- SVM.sub.cruz$result$qi
+classAceites <- class[class$prob1 >= qi[class$class1],]
+
+
+matErro <- as.data.frame.matrix(table(class = factor(classAceites$class1, levels=levels(classAceites$verdade)), verdade = classAceites$verdade))
+correcTot <- cc(matErro);correcTot
+userA <- diag(as.matrix(matErro))/rowSums(matErro);userA
+prodA <- diag(as.matrix(matErro))/colSums(matErro);prodA
+
+
+percClass <- nrow(classAceites)/nrow(dadosClassificadores);percClass
+
+#QUESTAO: como medir a percentagem de parcelas com classificacao aceite?
+#Isto e a versao com a verdade, que faz mais sentido
+percClassCult <- table(factor(classAceites$class1, levels=levels(classAceites$verdade)))/table(dadosClassificadores$cultura);percClassCult
+
+#Isto e a versao com a classificacao
+percClassCult <- table(factor(classAceites$class1, levels=levels(classAceites$verdade)))/table(class$class1);percClassCult
+

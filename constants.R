@@ -42,15 +42,27 @@ NOMES_CULT <<- c('Permanent grassland',
                  'Rice',
                  'Fallow',
                  'Wheat',
-                 'Vineyard',
                  'Poor grassland',
+                 'Vineyard',
                  'Non used area',
                  'Barley',
                  'Oat',
-                 'Olive tree')
+                 'Olive grove')
 
-COD_CULT <<- c('PGL', 'FOR', 'MAI', 'RIC', 'FAL', 'WHE', 'VYA', 'POG', 'NUA', 'BAR', 'OAT', 'OLI')
+COD_CULT <<- c('PGL', 'FOR', 'MAI', 'RIC', 'FAL', 'WHE', 'POG', 'VYA', 'NUA', 'BAR', 'OAT', 'OLI')
 
+ABRV_CULT <<-  c('Grassland',
+                 'Forage crops',
+                 'Maize',
+                 'Rice',
+                 'Fallow',
+                 'Wheat',
+                 'Poor grassland',
+                 'Vineyard',
+                 'Non used area',
+                 'Barley',
+                 'Oat',
+                 'Olive grove')
 
 #Coordenadas da area de estudo - PRE DESCOBERTA DE NUVENS
 #AREA.X <- c( 490733,  568131,  573315,  490717,  490733)

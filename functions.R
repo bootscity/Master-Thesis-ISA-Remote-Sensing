@@ -41,9 +41,9 @@ init  <-  function()
   library(data.table)
   library(e1071)
   library(class)
-  library(tree)
-  library(party)
-  library(rpart)
+  #library(tree)
+  #library(party)
+  #library(rpart)
   library(subselect)
   library(plotrix)
   library(kknn)
@@ -119,7 +119,8 @@ corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo=FALSE, pref
       ficheiroImagem <- paste0(conjuntoPath,"/",nomeImagem)
       imagem <- raster(ficheiroImagem)
       
-      if (areaEstudo == FALSE)
+      #if (areaEstudo == FALSE)
+      if(3 > 23)
         imagemArea <- imagem
       else
       {
@@ -152,14 +153,18 @@ corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo=FALSE, pref
       
       #2) Correccao atmosferica - DOS4
       #Estimacao iterativa de T_v, T_z, E_down, L_p
-      LSatMin <- cellStats(LSat, min)
+      #LSatMin <- cellStats(LSat, min)
+      LSatMin <- LSat@data@min
       doyStr <- substr(as.character(metadata$V3[5]),14,16)
       doy <- as.numeric(doyStr)
       d <- (1-0.017^2)/(1+0.017*cos(365.25/360*doy*(pi/180)))
       E0 <- ESOLAR.ETM7[j]/d^2
       tetaElev <- as.numeric(as.character(metadata$V3[62]))
-      tetav <- 2*pi/360*(90-tetaElev)
-      tetaz <- 0
+      tetaz <- 2*pi/360*(90-tetaElev)
+      tetav <- 0
+      
+      #tetav <- 2*pi/360*(90-tetaElev)
+      #tetaz <- 0
       
       Tv <- 1
       Tz <- 1
@@ -190,9 +195,15 @@ corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo=FALSE, pref
       reflect[reflect>1] <- 1
       
       #Resultados para data.frame resultadosDOS4
-      roMin <- cellStats(reflect, min)
-      roMax <- cellStats(reflect, max)
-      roMean <- cellStats(reflect, mean)
+      #roMin <- cellStats(reflect, min)
+      #roMax <- cellStats(reflect, max)
+      #roMean <- cellStats(reflect, mean)
+      
+      reflectMat <- as.matrix(reflect)
+      roMin <- min(reflectMat, na.rm = T)
+      roMax <- max(reflectMat, na.rm = T)
+      roMean <- mean(reflectMat, na.rm = T)
+      
       resultadosDOS4 <- rbind(resultadosDOS4,c(nomeImagem,k,tau,Tv,Tz,EDown,Lp,roMin,roMax,roMean))
       #resultadosDOS4 <- resultadosDOS4[-1,]
       
@@ -940,6 +951,14 @@ condensaMatriz <- function(m, ind) {
   m<-m[-ind[-1],-ind[-1]]
   print(cc(m))
   return(m)
+}
+convertCoord <- function(coord){
+  deg <- floor(coord)
+  x <- (coord - deg) * 60
+  min <- floor(x)
+  y <- (x - min) * 60
+  sec <- floor(y)
+  return(paste0(deg, "d ", min, "' ", sec, "''"))
 }
 
 

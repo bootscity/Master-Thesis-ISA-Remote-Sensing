@@ -588,3 +588,36 @@ str(mylist)
 mylist<-list(1:3, "dog", TRUE)
 sapply(mylist, identity)
 unlist(sapply(mylist, identity))
+
+
+
+
+
+
+
+
+
+
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#DataFrame com os valores de V, P0, P1, P2
+solidos <- read.xlsx2("s.xlsx", sheetIndex=2, colClasses=rep('numeric',4))
+
+
+SST <- 10^6*(solidos$P1 - solidos$P0)/solidos$V
+SSF <- 10^6*(solidos$P2 - solidos$P0)/solidos$V;SSF
+SSV <- SST - SSF
+solidos <- cbind(solidos, SST, SSF, SSV)
+
+medSST <- c()
+for(i in seq(1, nrow(solidos), 2))
+  medSST <- cbind(medSST, mean(c(SST[i], SST[i+1]), na.rm = T))
+
+date <- c('A', 'A', 'B', 'B', 'B', 'C', 'C', 'D', 'A', 'A', 'A')
+SST <- round(runif(11, 0, 3), 1)
+j <- data.frame(date,SST);j
+id <- rle(j$date)
+medias <- tapply(j$SST, rep(1:length(id$lengths), id$lengths), mean) 
+data.frame(date = id$values, medias)
+
