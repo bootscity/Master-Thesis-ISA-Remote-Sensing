@@ -200,6 +200,150 @@ resultado.multi <- table(pred = validacao.multi, true = dadosValidacao[,1]);resu
 
 
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#   CENAS DE "ANALISE EXPLORATORIA"                                                   ####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3.2 Assinaturas espectrais POR CULTURA ----
+
+#Assinaturas todas
+assinaturas <- matrix(nrow=0,ncol=length(BANDAS.LANDSAT))
+for(i in 1:nrow(listaTodasParcelas))
+{
+  assinatura <- c()
+  for(j in seq(0,6*7,8)+7)
+    assinatura <- c(assinatura,listaTodasParcelas[i,j])
+  
+  assinaturas <- rbind(assinaturas,assinatura)
+}
+
+plot(BANDAS.LANDSAT,assinaturas[1,],type='l',ylim=c(0,0.35))
+for(i in 1:length(assinaturas))
+  lines(BANDAS.LANDSAT,assinaturas[i,],col=i)
+
+#Assinaturas medias por ocupacao de solo
+dados <- data.table(listaTodasParcelas)
+assinaturasPorCulturaD3 <- dados[,list(area=sum(area),
+                                       B1_d3=mean(B1_d3),
+                                       B2_d3=mean(B2_d3),
+                                       B3_d3=mean(B3_d3),
+                                       B4_d3=mean(B4_d3),
+                                       B5_d3=mean(B5_d3),
+                                       B6_d3=mean(B6_d3)),by=cultura]
+assinaturasPorCulturaD3 <- as.data.frame(assinaturasPorCulturaD3)
+assinaturasPorCulturaD3 <- assinaturasPorCulturaD3[order(assinaturasPorCulturaD3$cultura, decreasing = F),]
+
+
+plot(BANDAS.LANDSAT,assinaturasPorCulturaD3[1,3:8],type='l',ylim=c(min(assinaturasPorCulturaD3$B6_d3),max(assinaturasPorCulturaD3$B4_d3)))
+text(5,assinaturasPorCulturaD3[1,7],assinaturasPorCulturaD3[1,1])
+for(i in 1:nrow(assinaturasPorCulturaD3))
+{
+  lines(BANDAS.LANDSAT,assinaturasPorCulturaD3[i,3:8],col=i)
+  text(5,assinaturasPorCulturaD3[i,7],assinaturasPorCulturaD3[i,1],col=i)
+}
+
+#Destacar pastagem permanente
+lines(BANDAS.LANDSAT,assinaturasPorCulturaD3[1,3:8],col='red',lwd=5)
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3.3 NDVI's por cultura ----
+NDVIPorCulturaD4 <- dados[,list(area=sum(area),
+                                NDVI_d1=mean(NDVI_d1),
+                                NDVI_d2=mean(NDVI_d2),
+                                NDVI_d3=mean(NDVI_d3),
+                                NDVI_d4=mean(NDVI_d4),
+                                NDVI_d5=mean(NDVI_d5),
+                                NDVI_d6=mean(NDVI_d6),
+                                NDVI_d7=mean(NDVI_d7),
+                                NDVI_d8=mean(NDVI_d8)),by=cultura]
+NDVIPorCulturaD4 <- as.data.frame(NDVIPorCulturaD4)
+
+datasGrafico <- datas <- names(listaDados[[1]][[1]][[1]]$DR)
+substr(datasGrafico,0,1) <- "0"
+datasGrafico <- as.numeric(datasGrafico)
+
+plot(datasGrafico,NDVIPorCulturaD4[1,3:10],type='l',ylim=c(0,1))
+text(5,NDVIPorCulturaD4[1,7],NDVIPorCulturaD4[1,1])
+for(i in 1:nrow(NDVIPorCulturaD4))
+{
+  lines(datasGrafico,NDVIPorCulturaD4[i,3:10],col=i)
+  text(5,NDVIPorCulturaD4[i,7],NDVIPorCulturaD4[i,1],col=i)
+}
+
+lines(datasGrafico,NDVIPorCulturaD4[1,3:10],col='red',lwd=5)
+
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3.4 Historgramas/densidades ----
+
+#Histogramas
+h <- hist(listaTodasParcelas$B4_d1,breaks=50,prob=T)
+lines(density(listaTodasParcelas$B4_d1),col='red')
+
+#Historgramas/densidades ao longo do TEMPO com BANDA fixa
+plot(density(listaTodasParcelas$B4_d1),col=1,xlim=c(0,0.5))
+lines(density(listaTodasParcelas$B4_d2),col=2)
+lines(density(listaTodasParcelas$B4_d3),col=3)
+lines(density(listaTodasParcelas$B4_d4),col=4)
+lines(density(listaTodasParcelas$B4_d5),col=5)
+lines(density(listaTodasParcelas$B4_d6),col=6)
+
+#Historgramas/densidades ao longo da BANDA com TEMPO fixo
+plot(density(listaTodasParcelas$B1_d4),col=1,xlim=c(0,0.5))
+lines(density(listaTodasParcelas$B2_d4),col=2)
+lines(density(listaTodasParcelas$B3_d4),col=3)
+lines(density(listaTodasParcelas$B4_d4),col=4)
+lines(density(listaTodasParcelas$B5_d4),col=5)
+lines(density(listaTodasParcelas$B6_d4),col=6)
+
+#Normalidade das reflectancias - Rejeita se a hipotese de virem duma populacao com distribuicao normal
+hist(listaTodasParcelas$B4_d1,breaks=20)
+qqnorm(listaTodasParcelas$B4_d1)
+shapiro.test(listaTodasParcelas$B4_d1[1:5000])
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3.5 Vizualizacao 3D dos dados nas 3 variaveis mais importantes ----
+
+#Seleccao das 3 var's mais importantes
+trim.matrix(cor(dadosTreino[,-1]),0.5)
+
+#Graficos 3D
+library(rgl)
+cultGrafico <- c(1,3,9,13)
+plot3d(x=dadosTreino$B3_d3[!dadosTreino$cultura %in% cultGrafico],
+       y=dadosTreino$B4_d3[!dadosTreino$cultura %in% cultGrafico],
+       z=dadosTreino$B4_d6[!dadosTreino$cultura %in% cultGrafico],
+       xlab="B3_d3",
+       ylab="B4_d3",
+       zlab="B4_d6",
+       size=3)
+points3d(x=dadosTreino$B3_d3[dadosTreino$cultura == 1],
+         y=dadosTreino$B4_d3[dadosTreino$cultura == 1],
+         z=dadosTreino$B4_d6[dadosTreino$cultura == 1],
+         col="red") #Pastagem
+points3d(x=dadosTreino$B3_d3[dadosTreino$cultura == 3],
+         y=dadosTreino$B4_d3[dadosTreino$cultura == 3],
+         z=dadosTreino$B4_d6[dadosTreino$cultura == 3],
+         col="blue")  #Arroz
+points3d(x=dadosTreino$B3_d3[dadosTreino$cultura == 9],
+         y=dadosTreino$B4_d3[dadosTreino$cultura == 9],
+         z=dadosTreino$B4_d6[dadosTreino$cultura == 9],
+         col="green")   #Aveia
+points3d(x=dadosTreino$B3_d3[dadosTreino$cultura == 13],
+         y=dadosTreino$B4_d3[dadosTreino$cultura == 13],
+         z=dadosTreino$B4_d6[dadosTreino$cultura == 13],
+         col="orange")  #Beterraba
+
+
+
+
+
+
+
+
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #   EXPERIENCIAS                                                                      ####

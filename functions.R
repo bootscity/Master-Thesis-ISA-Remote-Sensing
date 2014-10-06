@@ -233,6 +233,35 @@ corrigeLeConjuntoImagensLandsat <- function(conjuntoPath, areaEstudo=FALSE, pref
 }
 
 
+leImagemCDR <- function(conjuntoPath, areaEstudo=FALSE)
+{
+  out <- list()
+  codigoImagens <- substr(list.files(conjuntoPath, full.names = FALSE)[2], 1, 21)
+  
+  for(j in 1:length(BANDAS.LANDSAT))
+  {
+    #Abrir imagem
+    pathImagem <- paste0(conjuntoPath,"/",codigoImagens,"_sr_band",BANDAS.LANDSAT[j],".tif")
+    imagem <- raster(pathImagem)
+    
+    #Fazer clip do raster pela area de estudo
+    imagemArea <- crop(imagem, areaEstudo)
+    
+    #Mascarar valores que estao fora da area de estudo como NA
+    imagemArea <- mask(x=imagemArea, mask=areaEstudo, updatevalue=NA)
+  
+    #Converter valores de 0 (FAIXAS PRETAS) para NA
+    #imagemArea[imagemArea == 0] <- NA
+    
+    
+    outItemName <- paste0("b",BANDAS.LANDSAT[j])
+    out[[outItemName]] <- imagemArea/10000
+  }
+  
+  return(out)
+}
+
+
 #5. Funcao constroiListaImagensLandsat:
 #   input:  - landsatPath: caminho para a directoria que contem todas as datas de Landsat: nesta directoria, as 
 #                         pastas para cada imagem TEM que estar ordenadas cronoligicamente
@@ -260,7 +289,13 @@ constroiListaImagensLandsat <- function(landsatPath, areaEstudo, prefixo, ano=AN
     #if(ano != todosAnos[j]) next
     doy <- doys[j]
     strDoy <- paste0("d", doy)
-    out[[strAno]][[strDoy]][["DR"]] <- corrigeLeConjuntoImagensLandsat(paste0(landsatPath,"/",conjuntos[j]), areaEstudo, prefixo, corrige)
+    #out[[strAno]][[strDoy]][["DR"]] <- corrigeLeConjuntoImagensLandsat(paste0(landsatPath,"/",conjuntos[j]), areaEstudo, prefixo, corrige)
+    
+    out[[strAno]][[strDoy]][["DR"]] <- leImagemCDR(paste0(landsatPath,"/",conjuntos[j]), areaEstudo)
+    
+    
+    
+    
     
     #Obter dados de coordenadas min e max
     img <- out[[strAno]][[strDoy]][["DR"]][["b1"]]
@@ -532,30 +567,26 @@ parcNIFAP<-function(nomeParc)
 #   input:  - ano:        ano em analise
 #           - data:       data em analise
 #           - banda:      banda espectral em analise
-#           - dimAmostra: numero de NIFAP's cujas parcelas se pretendem analisar
+#           - dimAmostra: numero de parcelas que se pretendem analisar
 #   output: - data.frame com dados organizados para se efectuar uma ANOVA hierarquizada
-constroiDadosANOVA <- function(ano, data, banda, dimAmostra)
+constroiDadosANOVA <- function(data, banda, dimAmostra)
 {
-  numParcANOVA <<- 1
   dadosANOVA <- matrix(nrow=0,ncol=3)
   set.seed(0)    #Depois e para tirar
-  amostraNIFAPs <- sort(sample(1:length(listaDados),dimAmostra))
+  amostraParcs <- sort(sample(1:length(finalListaDados),dimAmostra))
   
-  for(i in amostraNIFAPs)
-    #for(k in 1:length(listaDados[[i]][[ano]]))Isto so vai funcionar quando a listadados tiver todos os anos
-    for(k in 1:length(listaDados[[i]][[1]]))
-    {
-      parc <- listaDados[[i]][[1]][[k]]
-      reflectancias <- obtemConteudoParcela(parc,apenasInterior=TRUE,excluiVizinhos=TRUE)[[data]][,banda]
+  for(i in amostraParcs)
+  {
+    parc <- finalListaDados[[i]]
+    reflectancias <- obtemConteudoParcela(parc,apenasInterior=TRUE,excluiVizinhos=TRUE)[[data]][,banda]
+          
+    #Passar ao ciclo seguinte se houver um unico NA na parcela
+    if(any(is.na(reflectancias))) next
       
-      #Passar ao ciclo seguinte se houver um unico NA na parcela
-      if(any(is.na(reflectancias))) next
-      
-      cultura <- rep(parc$atributos$CULTURA,length(reflectancias))
-      parcela <- rep(names(listaDados[[i]][[1]])[[k]],length(reflectancias))
-      novaParc <- cbind(reflectancias,cultura,parcela)
-      dadosANOVA <- rbind(dadosANOVA,novaParc)
-      numParcANOVA <<- numParcANOVA+1
+    cultura <- rep(parc$atributos$CULTURA,length(reflectancias))
+    parcela <- rep(names(finalListaDados)[[i]],length(reflectancias))
+    novaParc <- cbind(reflectancias,cultura,parcela)
+    dadosANOVA <- rbind(dadosANOVA,novaParc)
     }
   
   #Converter resultado para data.frame com formatos correctos
@@ -567,88 +598,6 @@ constroiDadosANOVA <- function(ano, data, banda, dimAmostra)
   return(dadosANOVA)
 }
 
-
-#XX. Funcao verificaAprovacaoFinalValidacao
-#   input:  - NIFAP:  string na forma 'nXXXXXX' com o numero do processo que se pretende verificar. Para
-#                     efeitos de VALIDACAO, o processo de entrada e composto por parcelas cuja ocupacao
-#                     do solo e CONHECIDA
-#           - ano:    ano para o qual foi feita a verificacao
-#   output: - 0/1 se o processo obtem aprovacao de financiamento - VALIDACAO
-verificaAprovacaoFinalValidacao <- function(NIFAP, ano)
-{
-  processo <- listaDados[[NIFAP]][[paste0("a",ano)]]
-  
-  #Calculo da area do processo e obtencao das culturas e areas de cada parcela
-  areas <- c()
-  culturas <- c()
-  for(i in 1:length(processo))
-  {
-    areas[i] <- processo[[i]]$atributos$AREA/10000
-    culturas[i] <- processo[[i]]$atributos$CULTURA
-  }
-  somaAreas <- sum(areas)
-  dados <- data.table(culturas,areas)
-  dadosPorCultura <- dados[,list(areasCult=sum(areas)),by=culturas]
-  dadosPorCultura <- dadosPorCultura[order(dadosPorCultura$areasCult, decreasing = TRUE),]
-  
-  ##########################################################################
-  #Criterio 1
-  dadosC1 <- rbind(dadosPorCultura[dadosPorCultura$culturas == 143,], dadosPorCultura[dadosPorCultura$culturas == 144,])
-  somaAreasC1 <- sum(dadosC1$areasCult)
-  percentagemC1 <- somaAreasC1/somaAreas
-  if(percentagemC1 >= 0.05) C1 <- 1 else C1 <- 0
-  
-  ##########################################################################
-  #Criterio 2
-  
-  #isto ainda nao esta bem, porque considera cada COD_CULTURA como uma cultura diferente. E preciso juntar aquelas que sao culturas iguais (p.e. trigo duro e trigo mole?) e retirar coisas como inclutos ou pousios
-  
-  #retirar da data.frame pastagens e pousios e incultos (ocupacoes que nao sao culturas)
-  codNaoCulturas <- c(21,26,31,52,87,88,89,121,125,138,666)
-  codPastagem <- c(143,144)
-  codExclusao <- c(codNaoCulturas,codPastagem)
-  dadosPorCulturaC2 <- dadosPorCultura[!(dadosPorCultura$culturas %in% codExclusao),]
-  
-  #Criterio 2.1
-  if(somaAreas < 10)
-  {
-    C2 <- 1
-    numCulturas <- -1
-    percentagemC2 <- -1
-  }
-  
-  #Criterio 2.2
-  else if(somaAreas >= 10 && somaAreas < 30)
-  {
-    numCulturas <- length(dadosPorCulturaC2$culturas)
-    areaCultPrinc <- dadosPorCulturaC2$areasCult[1]
-    percentagemC2 <- areaCultPrinc/somaAreas
-    
-    if(numCulturas >= 2 && percentagemC2 <= 0.75) C2 <- 1 else C2 <- 0
-  }
-  
-  #Criterio 2.3
-  else if(somaAreas > 30)
-  {
-    numCulturas <- length(dadosPorCulturaC2$culturas)
-    if(numCulturas >= 2)
-      areaCultPrinc <- sum(dadosPorCulturaC2$areasCult[c(1,2)])
-    else
-      areaCultPrinc <- sum(dadosPorCulturaC2$areasCult[1])
-    
-    percentagemC2 <- areaCultPrinc/somaAreas
-    
-    if(numCulturas >= 3 & percentagemC2 <= 0.95) C2 <- 1 else C2 <- 0
-  }
-  
-  ##########################################################################
-  #Crierio 3 nao pode ser implementado
-  
-  ##########################################################################
-  #Decisao final
-  final <- C1*C2
-  return(data.frame(NIFAP=NIFAP,somaAreas=somaAreas, percentagemC1=percentagemC1, C1=C1, numCulturas=numCulturas, percentagemC2=percentagemC2, C2=C2, final=final))
-}
 
 
 #XX. Funcao constroiTodasParcelas
@@ -756,9 +705,7 @@ treinaValida <- function(tipo, treino, valid, k=NA, gamma=NA, cost=NA)
   result <- data.frame(parcela=rownames(valid),
                        verdade=valid[,1],
                        class1=class1,
-                       prob1=round(probs1, 3))
-                       #class2=class2,
-                       #prob2=round(probs2, 3))
+                       prob1=probs1)
   
   #Matriz de erro e percentagem de classificacoes correctas
   matErro <- as.data.frame.matrix(table(class = factor(class1, levels=levels(valid[,1])), verdade = valid[,1]))  
@@ -781,58 +728,6 @@ treinaValida <- function(tipo, treino, valid, k=NA, gamma=NA, cost=NA)
 }
 
 
-#XX. Funcao fixaLimiteQ
-#   input:  - ver 'validacaoCruzada'
-#   output: - ver 'validacaoCruzada'
-fixaLimiteQ <- function(classificador, lambda)
-{
-  #Estabelecimento do limite
-  c <- length(classificador$matErro)
-  qi <- c()
-  todasConfiancas <- matrix(rep(NA, length(seq(0, 1, by = 0.001))*c), byrow = F, ncol = c)
-  
-  #Para cada cultura
-  for(i in 1:c)
-    #Ir aumentanto o valor do limite q
-    for(q in seq(0, 1, by = 0.001))
-    {
-      Rq <- classificador$result[classificador$result$prob1 >= q & classificador$result$class1 == i,]
-      confianca.i <- nrow(Rq[Rq$verdade == Rq$class1,])/nrow(Rq)
-      
-      #Estabelecer a confianca inicial na primeira iteracao
-      if (q == 0) confianca.anterior <- confianca.i
-      
-      #Meter confianca actual no quadro de todas as confiancas
-      todasConfiancas[q*1000+1,i] <- confianca.i
-      
-      #Sair quando a confianca nao consegue atingir lambda pretendido
-      if(is.na(confianca.i)) {qi[i] <- 1; break}
-      
-      #Sair quando houver alteracao E quando q e suficientemente grande para garantir lambda
-      #if(confianca.i >= lambda & confianca.i != confianca.anterior) {qi[i] <- q; break}
-      #confianca.anterior <- confianca.i
-      
-      #Sair quando q e suficientemente grande para garantir lambda
-      if(confianca.i >= lambda & q >= min(Rq$prob1)) {qi[i] <- q; break}
-      
-    }
-  names(qi) <- names(classificador$matErro)
-  
-  #Analise da percentagem de parcelas com decisao i, DENTRO das que foram classificadas como i
-  nParcDec <- c()
-  for(i in 1:c)
-    nParcDec[i] <- nrow(classificador$result[classificador$result$class1 == i & classificador$result$prob1 >= qi[i],])
-  
-  nParcTot <- table(classificador$result$class1)
-  
-  #Output dos resultados
-  return(list(qi=qi,
-              todasConfiancas=todasConfiancas,
-              nParcDec=nParcDec,
-              nParcTot=nParcTot))
-}
-
-
 #XX. Funcao validacaoCruzada
 #   input:  - n:           cs
 #           - tipo:        'KNN' ou 'SVM'
@@ -852,11 +747,6 @@ fixaLimiteQ <- function(classificador, lambda)
 #               - gamma:        para classificador SVM
 #               - cost:         para classificador SMV
 #               - qi:           limites de probabilidade P(wi|x) que garantem lambda para classe i
-#               - nParcDec:     numero de parcelas em que e' tomada uma decisao em cada classe
-#               - nParcTot:     numero de parcelas em cada classe
-#               - percParcDec:  percentagem de parcelas em que e' tomada uma decisao em cada classe
-#               - percTotDec:   percentagem global de parcelas em que e' tomada uma decisao
-#               - percsDecs:    percentagem de parcelas em que e' tomada uma decisao para varios lambda's
 validacaoCruzada <- function(n, tipo, dados, lambda, k=NA, gamma=NA, cost=NA)
 {
   #Estas sao as particoes que FICAM DE FORA em cada uma das validacoes
@@ -873,59 +763,146 @@ validacaoCruzada <- function(n, tipo, dados, lambda, k=NA, gamma=NA, cost=NA)
     dadosTrein <- dados[-particoes[[i]],]
     dadosValid <- dados[particoes[[i]],]
     
-    #Treina e valida o classificador e fixa os limites qi
+    #Treina e valida o classificador
     classificador <- treinaValida(tipo, dadosTrein, dadosValid, k=k, gamma=gamma, cost=cost)
-    qiLimite <- fixaLimiteQ(classificador, lambda)
-    
-    #Percentagem de parcelas em que se toma uma decisao em funcao da gama de lambdas: total e por classe
-    lambdas <- seq(0.5, 1, by = 0.05)
-    percsDecs <- matrix(ncol = length(lambdas), nrow = length(qiLimite$qi)+1)
-    for(j in 1:length(lambdas))
-    {
-      res <- fixaLimiteQ(classificador = classificador, lambda = lambdas[j])
-      nParcDec <- res$nParcDec
-      nParcTot <- res$nParcTot
-      cult <- as.vector(nParcDec/nParcTot)
-      tot <- sum(nParcDec)/sum(nParcTot)
-      percsDecs[,j] <- c(tot,cult)
-    }
-    colnames(percsDecs) <- lambdas
-    rownames(percsDecs) <- c('total', as.character(codigosNovos2005$NOVO_NOME[1:12]))
     
     #Resultados desta validacao
-    resultTodos[[paste0('valid',i)]] <- c(classificador, qiLimite, percsDecs=list(percsDecs))
+    resultTodos[[paste0('valid',i)]] <- classificador
   }
   
-  #Construcao dos resultados
-  nomes <- names(resultTodos$valid1$qi)
+  #Juncao das classificacoes de cada fold
+  classificador <- NA
+  for(i in 1:n)
+    classificador <- rbind(classificador, resultTodos[[i]]$result)
+  classificador <- classificador[-1,]
+  
+  #Construcao dos resultados de output
+  nomes <- names(resultTodos$valid1$userA)
   tmp <- unlist(resultTodos, F)
-  result[["correcTot"]] <- as.vector(sapply("correcTot", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  result[["userA"]] <- as.vector(sapply("userA", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  names(result[["userA"]]) <- nomes
-  result[["prodA"]] <- as.vector(sapply("prodA", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  names(result[["prodA"]]) <- nomes
-  result[["qi"]] <- as.vector(sapply("qi", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  names(result[["qi"]]) <- nomes
-  #result[["nParcDec"]] <- as.vector(sapply("nParcDec", function(x) rowSums(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  #names(result[["nParcDec"]]) <- nomes
-  #result[["nParcTot"]] <- as.vector(sapply("nParcTot", function(x) rowSums(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
-  #names(result[["nParcTot"]]) <- nomes
-  
-  #result[["percParcDec"]] <- result[["nParcDec"]]/result[["nParcTot"]]
-  #result[["percTotDec"]] <- sum(result[["nParcDec"]])/sum(result[["nParcTot"]])
-  
-  #Fazer media das matrizes de percentagem de classificacoes em funcao de lambda
-  todasMatrizes <- c()
-  for(k in 1:length(resultTodos))
-    todasMatrizes <- c(todasMatrizes, resultTodos[[k]]$percsDecs)
-  arrayTodasMatrizes <- array(todasMatrizes, dim = c(nrow(percsDecs), ncol(percsDecs), length(resultTodos)))
-  result[["percsDecs"]] <- apply(arrayTodasMatrizes, 1:2, mean)
-  colnames(result[["percsDecs"]]) <- lambdas
-  rownames(result[["percsDecs"]]) <- c('total', as.character(codigosNovos2005$NOVO_NOME[1:12]))
+  result[["OA"]] <- as.vector(sapply("correcTot", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  result[["UA"]] <- as.vector(sapply("userA", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  names(result[["UA"]]) <- nomes
+  result[["PA"]] <- as.vector(sapply("prodA", function(x) rowMeans(na.rm = T, do.call(cbind, tmp[grep(x, names(tmp))]))))
+  names(result[["PA"]]) <- nomes
   
   print("Fim")
-  return(list(result=result, resultTodos=resultTodos))
+  return(list(result=result, resultTodos=resultTodos, classificador=classificador))
 }
+
+
+#XX. Funcao estimaQ
+#   input:  - ver 'validacaoCruzada'
+#   output: - ver 'validacaoCruzada'
+estimaQ <- function(classificador, lambdas)
+{
+  c <- length(table(classificador$verdade))
+  
+  #Calcula limites qi para diferentes lambdas
+  qis <- matrix(ncol = length(lambdas), nrow = c)
+  for(j in 1:length(lambdas))
+  {    
+    print(paste0('qi = ', lambdas[j]))
+    qi <- c()
+    
+    #Para cada cultura
+    for(i in 1:c)
+      #Ir aumentanto o valor do limite q
+      for(q in seq(0, 1, by = 0.001))
+      {
+        Rq <- classificador[classificador$prob1 >= q & classificador$class1 == i,]
+        confianca.i <- nrow(Rq[Rq$verdade == Rq$class1,])/nrow(Rq)
+        
+        #Sair quando a confianca nao consegue atingir lambda pretendido
+        if(is.na(confianca.i)) {qi[i] <- 1; break}
+        
+        #Sair quando q e suficientemente grande para garantir lambda
+        if(confianca.i >= lambdas[j] & q >= min(Rq$prob1)) {qi[i] <- q; break}   
+      }
+    
+
+    qis[,j] <- qi
+  }
+  colnames(qis) <- lambdas
+  rownames(qis) <- COD_CULT
+  return(qis)
+}
+
+
+
+#XX. Funcao NOVOestimaQ
+#   input:  - ver 'validacaoCruzada'
+#   output: - ver 'validacaoCruzada'
+NOVOestimaQ <- function(classificador, lambdas)
+{
+  c <- length(table(classificador$verdade))
+  
+  #Calcula limites qi para diferentes lambdas
+  qis <- matrix(ncol = length(lambdas), nrow = c)
+  for(j in 1:length(lambdas))
+  {    
+    print(paste0('qi = ', lambdas[j]))
+    qi <- c()
+    
+    #Para cada cultura
+    for(i in 1:c)
+    {
+      RqInicial <- classificador[classificador$class1 == i,]
+      RqInicial <- RqInicial[order(RqInicial$prob1, decreasing = F),]
+      
+      for(k in 1:nrow(RqInicial))
+      {
+        Rq <- RqInicial[k:nrow(RqInicial),]
+        UA <- nrow(Rq[Rq$verdade == Rq$class1,])/nrow(Rq)
+        
+        if(UA >= lambdas[j])
+        {
+          qi[i] <- RqInicial[k, 'prob1']
+          break
+        }
+        if(k == nrow(RqInicial)) {qi[i] <- 1; break}
+      }
+    }
+    qis[,j] <- qi
+  }
+  colnames(qis) <- lambdas
+  rownames(qis) <- COD_CULT
+  return(qis)
+}
+
+
+
+
+#XX. Funcao assessmentMetodo
+#   input:  - class:  o classificador resultado duma dada validacao cruzada efectuada
+#   output: - ...
+assessmentMetodo <- function(classificador, qis)
+{
+  out <- list()
+  lambdas <- colnames(qis)
+  for(i in 1:length(lambdas))
+  {
+    #Seleccao apenas das classificacoes aceites em funcao de lambda
+    qi <- qis[,i]
+    classAceites <- classificador[classificador$prob1 >= qi[classificador$class1],]
+    
+    #Matriz de erro e accuracy ststistics
+    matErro <- as.data.frame.matrix(table(class = factor(classAceites$class1, levels=levels(classAceites$verdade)), verdade = classAceites$verdade))
+    OA <- cc(matErro)
+    userA <- diag(as.matrix(matErro))/rowSums(matErro)
+    prodA <- diag(as.matrix(matErro))/colSums(matErro)
+    
+    #Percentagem de parcelas com classificacao aceites
+    percAcTot <- nrow(classAceites)/nrow(dadosClassificadores)
+    
+    #Isto e a versao com a classificacao
+    percAcCult <- table(factor(classAceites$class1, levels=levels(classAceites$verdade)))/table(classificador$class1)
+    
+    out[[paste0('l', lambdas[i])]] <- list(qi=qi, matErro=matErro, OA=OA, UA=userA, PA=prodA, OACP=percAcTot, ACP=percAcCult)
+  }
+  return(out)
+}
+
+
 
 
 
@@ -961,6 +938,36 @@ convertCoord <- function(coord){
   return(paste0(deg, "d ", min, "' ", sec, "''"))
 }
 
+
+
+
+
+NOVO.trim.matrix <- function (mat, tolval) 
+{
+  p <- dim(mat)[2]
+  matindices <- 1:p
+  mat.eig <- eigen(mat, symmetric = TRUE)
+  discard <- rep(FALSE, p)
+  newmat <- mat
+  newmatindices <- matindices
+  k <- c()
+  while (mat.eig$values[p]/mat.eig$values[1] < tolval) {
+    k <- c(k, mat.eig$values[1]/mat.eig$values[p])
+    int <- as.numeric(newmatindices[order(abs(mat.eig$vectors[,p]), decreasing = TRUE)[1]])
+    
+    discard[int] <- TRUE
+    newmat <- mat[!discard, !discard]
+    newmatindices <- matindices[!discard]
+    p <- p - 1
+    mat.eig <- eigen(newmat, symmetric = TRUE)
+  }
+  size <- dim(newmat)[2]
+  output <- list(newmat, as.numeric(matindices[discard]), colnames(mat)[discard], 
+                 size, k)
+  names(output) <- c("trimmedmat", "numbers.discarded", "names.discarded", 
+                     "size", "k")
+  output
+}
 
 
 
