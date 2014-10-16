@@ -129,6 +129,16 @@ plot(dados.aov,which=c(1,2,4,5))
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Nova abordagem - fazer apenas decomposição da SQT
+MEGAdadosANOVA <- constroiDadosANOVA(data=5, banda=4, dimAmostra=11582)
+somaDeQuadrados(MEGAdadosANOVA)
+
+
+somaDeQuadrados(dadosANOVA)
+
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
 #Nova abordagem - averigua so se a cultura tem efeitos sobre cada uma das combinacoes banda/data e NDVI's
 FValues <- c()
 pValues <- c()
@@ -293,13 +303,11 @@ SVM.sub.cruz <- validacaoCruzada(n = 10, tipo = 'SVM', dados = dadosClassificado
 
 #Estimacao dos q_j
 SVM.sub.qi <- estimaQ(classificador = SVM.sub.cruz$classificador, lambdas = c(0.6, 0.7, 0.8, 0.9, 0.95))
-SVM.sub.qi.NOVO <- NOVOestimaQ(classificador = SVM.sub.cruz$classificador, lambdas = c(0.8))
 
 
 
 #Assessment do metodo
 SVM.sub.assess <- assessmentMetodo(classificador = SVM.sub.cruz$classificador,  qis = SVM.sub.qi)
-SVM.sub.assess.NOVO <- assessmentMetodo(classificador = SVM.sub.cruz$classificador,  qis = SVM.sub.qi.NOVO)
 
 
 

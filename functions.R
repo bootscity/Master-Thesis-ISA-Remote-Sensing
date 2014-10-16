@@ -599,6 +599,39 @@ constroiDadosANOVA <- function(data, banda, dimAmostra)
 }
 
 
+somaDeQuadrados <- function(dados)
+{
+  # Calculo SQT
+  SQT <- var(dados$reflectancias)*(length(dados$reflectancias)-1)
+  
+  # Calculo SQA
+  SQA <- 0
+  grandeMedia <- mean(dados$reflectancias)
+  for(i in 1:12)
+  {
+    x <- dados[dados$cultura == i,]
+    ni <- nrow(x)
+    if(nrow(x) == 0) next
+    media <- mean(x$reflectancias)
+    
+    SQA <- SQA + ni*(media - grandeMedia)^2
+  }
+  
+  # Calculo SQRE
+  rle <- rle(as.vector(dados$parcela))$lengths
+  rleCont <- rep(1:length(rle), rle)
+  dados <- cbind(dados, rle=rleCont)
+  medias <- tapply(dados$reflectancias, rleCont, mean)
+  SQRE <- sum((dados$reflectancias - medias[dados$rle])^2)
+  
+  # Calculo SQAB
+  SQAB <- SQT-SQA-SQRE
+  
+  return(list(SQT=SQT, SQA=SQA, SQAB=SQAB, SQRE=SQRE))
+}
+
+
+
 
 #XX. Funcao constroiTodasParcelas
 #   input:  - excluiVazias: TRUE/FALSE a indicar se as parcelas com NA devem ser excluidas
@@ -793,7 +826,7 @@ validacaoCruzada <- function(n, tipo, dados, lambda, k=NA, gamma=NA, cost=NA)
 #XX. Funcao estimaQ
 #   input:  - ver 'validacaoCruzada'
 #   output: - ver 'validacaoCruzada'
-estimaQ <- function(classificador, lambdas)
+OLDestimaQ <- function(classificador, lambdas)
 {
   c <- length(table(classificador$verdade))
   
@@ -832,7 +865,7 @@ estimaQ <- function(classificador, lambdas)
 #XX. Funcao NOVOestimaQ
 #   input:  - ver 'validacaoCruzada'
 #   output: - ver 'validacaoCruzada'
-NOVOestimaQ <- function(classificador, lambdas)
+estimaQ <- function(classificador, lambdas)
 {
   c <- length(table(classificador$verdade))
   
